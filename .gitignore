@@ -1,0 +1,23 @@
+*.py[cod]
+
+.pytest_cache
+venv
+.idea
+.cache
+config
+
+# Packages
+*.egg
+*.egg-info
+.eggs/*
+dist
+build
+eggs
+parts
+bin
+var
+sdist
+develop-eggs
+.installed.cfg
+lib
+lib64
