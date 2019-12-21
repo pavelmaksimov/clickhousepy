@@ -62,19 +62,19 @@ class Client(ChClient):
         :param extra_before_settings: str : будет вставлено перед SETTINGS
         :return: None
         """
-        if primary_key:
+        if primary_key is not None:
             primary_key = ", ".join(primary_key)
             primary_key = "PRIMARY KEY ({})".format(primary_key)
         else:
             primary_key = ""
 
-        if partition:
+        if partition is not None:
             partition = ", ".join(partition)
             partition = "PARTITION BY ({})".format(partition)
         else:
             partition = ""
 
-        if sample:
+        if sample is not None:
             sample = ", ".join(map(str, sample))
             sample = "SAMPLE BY ({})".format(sample)
         else:
@@ -85,8 +85,8 @@ class Client(ChClient):
 
         columns = ",\n\t".join(columns)
         orders = ", ".join(orders)
-        settings = "SETTINGS {}".format(settings) if settings else ""
-        ttl = "TTL {}".format(ttl) if ttl else ""
+        settings = "SETTINGS {}".format(settings) if settings is not None else ""
+        ttl = "TTL {}".format(ttl) if ttl is not None else ""
         exists = "IF NOT EXISTS" if if_not_exists else ""
 
         query = (
@@ -109,7 +109,8 @@ class Client(ChClient):
             extra=extra_before_settings,
             engine=engine,
         )
-        return self.execute(query, **kwargs)
+        self.execute(query, **kwargs)
+        return self.Table(db, table)
 
     def create_table_log(
         self,
@@ -149,7 +150,8 @@ class Client(ChClient):
             table=table,
             type_log_table=type_log_table,
         )
-        return self.execute(query, **kwargs)
+        self.execute(query, **kwargs)
+        return self.Table(db, table)
 
     def copy_table(self, db, table, new_db, new_table, **kwargs):
         query = "CREATE TABLE {}.{} as {}.{}".format(new_db, new_table, db, table)
@@ -186,7 +188,7 @@ class Client(ChClient):
         if not isinstance(partitions, list):
             partitions = [[str(partitions)]]
 
-        map(_drop_partition, partitions)
+        list(map(_drop_partition, partitions))
 
     def is_mutation_done(self, mutation_id, **kwargs):
         query = "SELECT is_done " "FROM system.mutations " "WHERE mutation_id='{}' "
@@ -194,26 +196,17 @@ class Client(ChClient):
         r = self.execute(query, **kwargs)
         return r[0][0] if r else None
 
-    def _get_last_mutation_id(self, db, table, command, **kwargs):
+    def _get_last_mutation_id(self, type_mutation, db, table, command, **kwargs):
         command = command.replace("'", "\\'")
-        command = command[command.upper().find("UPDATE") :]
+        command = command[command.upper().find(type_mutation) :]
         query = (
             "SELECT mutation_id "
             "FROM system.mutations "
-            """WHERE database='{}' AND table='{}' AND command='{}' """
+            "WHERE database='{}' AND table='{}' AND command='{}' "
             "ORDER BY create_time DESC"
         ).format(db, table, command)
         r = self.execute(query, **kwargs)
         return r[0][0] if r else None
-
-    def _count_run_mutations(self, db, table, **kwargs):
-        query = (
-            "SELECT count() "
-            "FROM system.mutations "
-            "WHERE database='{}' AND table='{}' AND is_done=0"
-        ).format(db, table)
-        r = self.execute(query, **kwargs)
-        return r[0][0]
 
     def delete(
         self, db, table, where, prevent_parallel_processes=False, sleep=1, **kwargs
@@ -222,15 +215,15 @@ class Client(ChClient):
 
         if prevent_parallel_processes:
             while True:
-                r = self._count_run_mutations(db, table)
+                r = self.get_count_run_mutations(db, table)
                 if r == 0:
                     self.execute(query, **kwargs)
-                    return self._get_last_mutation_id(db, table, query)
+                    return self._get_last_mutation_id("DELETE", db, table, query)
                 else:
                     time.sleep(sleep)
         else:
             self.execute(query, **kwargs)
-            return self._get_last_mutation_id(db, table, query)
+            return self._get_last_mutation_id("DELETE", db, table, query)
 
     def update(
         self,
@@ -247,15 +240,24 @@ class Client(ChClient):
 
         if prevent_parallel_processes:
             while True:
-                r = self._count_run_mutations(db, table)
+                r = self.get_count_run_mutations(db, table)
                 if r == 0:
                     self.execute(query, **kwargs)
-                    return self._get_last_mutation_id(db, table, query)
+                    return self._get_last_mutation_id("UPDATE", db, table, query)
                 else:
                     time.sleep(sleep)
         else:
             self.execute(query, **kwargs)
-            return self._get_last_mutation_id(db, table, query)
+            return self._get_last_mutation_id("UPDATE", db, table, query)
+
+    def get_count_run_mutations(self, db, table, **kwargs):
+        query = (
+            "SELECT count() "
+            "FROM system.mutations "
+            "WHERE database='{}' AND table='{}' AND is_done=0"
+        ).format(db, table)
+        r = self.execute(query, **kwargs)
+        return r[0][0]
 
     def get_min_date(self, db, table, where=None, date_column_name="Date", **kwargs):
         where = "WHERE " + where if where else ""
@@ -364,11 +366,18 @@ class Client(ChClient):
 
 class Table:
     def __init__(self, client, db, table):
-        self._client = client
+        self._client = client or Client
         self.db = db
         self.table = table
 
+    def get(self, query, **kwargs):
+        query = query.replace("{db}", self.db)
+        query = query.replace("{table}", self.table)
+        return self._client.execute(query, **kwargs)
+
     def get_df(self, query, columns_names=None, **kwargs):
+        query = query.replace("{db}", self.db)
+        query = query.replace("{table}", self.table)
         return self._client.get_df(query, columns_names, **kwargs)
 
     def insert(self, data, columns=None, **kwargs):
@@ -394,48 +403,62 @@ class Table:
     def describe(self, **kwargs):
         return self._client.describe(self.db, self.table, **kwargs)
 
-    def drop(self, **kwargs):
-        return self._client.drop_table(self.db, self.table, **kwargs)
-
-    def delete(self, where, prevent_parallel_processes=False, **kwargs):
+    def delete(self, where, prevent_parallel_processes=False, sleep=1, **kwargs):
         return self._client.delete(
-            self.db,
-            self.table,
-            where,
+            db=self.db,
+            table=self.table,
+            where=where,
             prevent_parallel_processes=prevent_parallel_processes,
+            sleep=sleep,
             **kwargs,
         )
 
-    def update(self, where, prevent_parallel_processes=False, **kwargs):
+    def update(self, update, where, prevent_parallel_processes=False, sleep=1, **kwargs):
         return self._client.update(
-            self.db,
-            self.table,
-            where,
+            db=self.db,
+            table=self.table,
+            update=update,
+            where=where,
             prevent_parallel_processes=prevent_parallel_processes,
+            sleep=sleep,
             **kwargs,
         )
 
-    def count_rows(self, where=None, **kwargs):
+    def get_count_rows(self, where=None, **kwargs):
         return self._client.get_count_rows(self.db, self.table, where=where, **kwargs)
 
-    def min_date(self, where=None, date_column_name="Date", **kwargs):
+    def get_min_date(self, where=None, date_column_name="Date", **kwargs):
         return self._client.get_min_date(
             self.db, self.table, where, date_column_name, **kwargs
         )
 
-    def max_date(self, where=None, date_column_name="Date", **kwargs):
+    def get_max_date(self, where=None, date_column_name="Date", **kwargs):
         return self._client.get_max_date(
             self.db, self.table, where, date_column_name, **kwargs
         )
 
-    def copy(self, new_db, new_table, **kwargs):
-        return self._client.copy_table(self.db, self.table, new_db, new_table, **kwargs)
+    def copy_table(self, new_db, new_table, **kwargs):
+        self.copy_table(new_db, new_table, **kwargs)
+        return Table(self._client, self.db, self.table)
 
     def optimize_table(self, **kwargs):
         return self._client.optimize_table(self.db, self.table, **kwargs)
 
     def check_table(self, **kwargs):
         return self._client.check_table(self.db, self.table, **kwargs)
+
+    def drop_table(self, if_exists=True, **kwargs):
+        return self._client.drop_table(self.db, self.table, if_exists=if_exists, **kwargs)
+
+    def drop_partitions(self, partitions, **kwargs):
+        """
+        :param partitions: str or int or list(list)
+             Если ключ таблицы состоит из одного столбца, то можно передать, как str
+             Иначе, как list(list).
+             Примеры:  '2018-01-01' или 123 или [...,[12345, '2018-01-01']]
+        :return:
+        """
+        self._client.drop_partitions(self.db, self.table, partitions=partitions, **kwargs)
 
     def attach(self, if_exists=True, cluster=None, **kwargs):
         return self._client.attach(self.db, self.table, if_exists, cluster, **kwargs)
