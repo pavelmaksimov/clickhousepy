@@ -1,7 +1,10 @@
-import yaml
 import datetime as dt
-from clickhousepy import Client
 import time
+
+import yaml
+
+from clickhousepy import Client
+
 with open("config.yml", "r") as stream:
     data_loaded = yaml.safe_load(stream)
 
@@ -25,9 +28,9 @@ def test():
     )
     t = client.Table(TEST_DB, TEST_TABLE)
     print(t.describe())
-    t.insert([{"s": "1", "d": dt.datetime(2000,1,1)},
-              {"s": "2", "d": dt.datetime(2000,1,2)},
-              {"s": "3", "d": dt.datetime(2000,1,3)}],
+    t.insert([{"s": "1", "d": dt.datetime(2000, 1, 1)},
+              {"s": "2", "d": dt.datetime(2000, 1, 2)},
+              {"s": "3", "d": dt.datetime(2000, 1, 3)}],
              columns=["s", "d"])
     print(t.get_count_rows())
     print(t.get_min_date(date_column_name="d"))
@@ -62,7 +65,8 @@ def test_mutation():
     t.drop_table()
     client.create_table_mergetree(TEST_DB, TEST_TABLE, columns=['s String', 'n String'], orders=['s'])
     t.insert(data=[{"s": "--", "n": "6"}, {"s": "111", "n": "0"}])
-    mutation_id = t.update(update='''  n = '1000'   ''', where='''  n = '6'   ''', prevent_parallel_processes=True, sleep=1)
+    mutation_id = t.update(update='''  n = '1000'   ''', where='''  n = '6'   ''', prevent_parallel_processes=True,
+                           sleep=1)
     print("start mutation")
     is_mutation_done = client.is_mutation_done(mutation_id)
     print('is mutation?', is_mutation_done)

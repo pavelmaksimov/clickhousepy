@@ -153,9 +153,13 @@ class Client(ChClient):
         self.execute(query, **kwargs)
         return self.Table(db, table)
 
-    def copy_table(self, db, table, new_db, new_table, **kwargs):
-        query = "CREATE TABLE {}.{} as {}.{}".format(new_db, new_table, db, table)
-        return self.execute(query, **kwargs)
+    def copy_table(self, db, table, new_db, new_table, if_not_exists=True, **kwargs):
+        exists = "IF NOT EXISTS" if if_not_exists else ""
+        query = "CREATE TABLE {} {}.{} as {}.{}".format(
+            exists, new_db, new_table, db, table
+        )
+        self.execute(query, **kwargs)
+        return self.Table(new_db, new_table)
 
     def drop_db(self, db, if_exists=True, **kwargs):
         exists = "IF EXISTS" if if_exists else ""
@@ -438,8 +442,7 @@ class Table:
         )
 
     def copy_table(self, new_db, new_table, **kwargs):
-        self.copy_table(new_db, new_table, **kwargs)
-        return Table(self._client, self.db, self.table)
+        return self._client.copy_table(new_db, new_table, **kwargs)
 
     def optimize_table(self, **kwargs):
         return self._client.optimize_table(self.db, self.table, **kwargs)
