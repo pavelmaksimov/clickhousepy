@@ -2,6 +2,6 @@
 
 __author__ = "Pavel Maksimov"
 __email__ = "vur21@ya.com"
-__version__ = "2019.12.16"
+__version__ = "2019.12.23"
 
 from .clickhouse import Client
