@@ -417,7 +417,9 @@ class Table:
             **kwargs,
         )
 
-    def update(self, update, where, prevent_parallel_processes=False, sleep=1, **kwargs):
+    def update(
+        self, update, where, prevent_parallel_processes=False, sleep=1, **kwargs
+    ):
         return self._client.update(
             db=self.db,
             table=self.table,
@@ -451,7 +453,9 @@ class Table:
         return self._client.check_table(self.db, self.table, **kwargs)
 
     def drop_table(self, if_exists=True, **kwargs):
-        return self._client.drop_table(self.db, self.table, if_exists=if_exists, **kwargs)
+        return self._client.drop_table(
+            self.db, self.table, if_exists=if_exists, **kwargs
+        )
 
     def drop_partitions(self, partitions, **kwargs):
         """
@@ -461,7 +465,9 @@ class Table:
              Примеры:  '2018-01-01' или 123 или [...,[12345, '2018-01-01']]
         :return:
         """
-        self._client.drop_partitions(self.db, self.table, partitions=partitions, **kwargs)
+        self._client.drop_partitions(
+            self.db, self.table, partitions=partitions, **kwargs
+        )
 
     def attach(self, if_exists=True, cluster=None, **kwargs):
         return self._client.attach(self.db, self.table, if_exists, cluster, **kwargs)
