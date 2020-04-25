@@ -1,5 +1,6 @@
 import datetime as dt
 import time
+from importlib.util import find_spec
 
 import yaml
 
@@ -36,7 +37,10 @@ def test():
     print(t.get_min_date(date_column_name="d"))
     print(t.get_max_date(date_column_name="d"))
     print(t.get("SELECT * FROM {db}.{table}"))
-    print(t.get_df("SELECT * FROM {db}.{table}"))
+
+    if find_spec("pandas"):
+        print(t.get_df("SELECT * FROM {db}.{table}"))
+
     t.drop_partitions("1")
     t.drop_partitions([["2"], ["3"]])
     time.sleep(1)
@@ -93,11 +97,13 @@ def test_insert_transform_from_table():
 
 
 def test_get_df():
-    r = client.get_df("SELECT arrayJoin({0}) as a, arrayJoin({0}) as ba".format(list(range(10))))
-    print(r.columns)
-    print(r)
+    if find_spec("pandas"):
+        r = client.get_df("SELECT arrayJoin({0}) as a, arrayJoin({0}) as ba".format(list(range(10))))
+        print(r.columns)
+        print(r)
 
 
 def test_get_df2():
-    r = client.get_df("SELECT 1 as a WHERE a > 1")
-    print(r)
+    if find_spec("pandas"):
+        r = client.get_df("SELECT 1 as a WHERE a > 1")
+        print(r)

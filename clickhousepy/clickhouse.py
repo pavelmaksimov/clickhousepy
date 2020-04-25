@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 from clickhouse_driver import Client as ChClient
 import time
-import pandas as pd
 
 
 class Client(ChClient):
@@ -363,6 +362,8 @@ class Client(ChClient):
         return self.execute(query, **kwargs)
 
     def get_df(self, query, columns_names=None, **kwargs):
+        import pandas as pd  # pylint: disable=import-error
+
         result = self.execute(query, **kwargs) or [[]]
         columns = columns_names or ["c{}".format(i + 1) for i in range(len(result[0]))]
         return pd.DataFrame(columns=columns, data=result)
