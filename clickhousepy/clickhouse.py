@@ -412,7 +412,10 @@ class DB(ChClient):
         return self._client.show_tables(self.db, like=like, **kwargs)
 
     def drop_db(self, if_exists=True, **kwargs):
-        return self._client.show_tables(self.db, if_exists=if_exists, **kwargs)
+        return self._client.drop_db(self.db, if_exists=if_exists, **kwargs)
+
+    def drop_table(self, table, if_exists=True, **kwargs):
+        return self._client.drop_table(self.db, table, if_exists, **kwargs)
 
     def create_table_mergetree(
         self,
