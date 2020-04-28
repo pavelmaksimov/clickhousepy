@@ -51,6 +51,25 @@ def test():
     assert t.exists() == False
 
 
+
+def test_Table():
+    client.drop_table(TEST_DB, TEST_TABLE)
+    t = client.create_table_mergetree(
+        TEST_DB, TEST_TABLE,
+        columns=['s String', 'd DateTime'],
+        orders=['s'],
+        partition=["s"]
+    )
+    t.insert([{"s": "1", "d": dt.datetime(2000, 1, 1)},
+              {"s": "2", "d": dt.datetime(2000, 1, 2)},
+              {"s": "3", "d": dt.datetime(2000, 1, 3)}],
+             columns=["s", "d"])
+    print("\n", t.execute("select 1"))
+    print("\n", t.query("select * from {db}.{table}"))
+    t.drop_table()
+    assert t.exists() == False
+
+
 def test_optimize_table():
     r = client.create_table_log(TEST_DB, TEST_TABLE, columns=['s String', 'd DateTime'])
     r = client.show_process()

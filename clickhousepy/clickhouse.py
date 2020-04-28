@@ -5,10 +5,12 @@ import time
 
 class Client(ChClient):
     def __init__(self, *args, **kwargs):
+        self.args = args
+        self.kwargs = kwargs
         super().__init__(*args, **kwargs)
 
     def Table(self, db, table):
-        return Table(self, db, table)
+        return Table(self, db, table, *self.args, **self.kwargs)
 
     def truncate(self, db, table, **kwargs):
         return self.execute("TRUNCATE TABLE {}.{}".format(db, table), **kwargs)
@@ -369,11 +371,12 @@ class Client(ChClient):
         return pd.DataFrame(columns=columns, data=result)
 
 
-class Table:
-    def __init__(self, client, db, table):
+class Table(ChClient):
+    def __init__(self, client, db, table, *args, **kwargs):
         self._client = client or Client
         self.db = db
         self.table = table
+        super().__init__(*args, **kwargs)
 
     def get(self, query, **kwargs):
         query = query.replace("{db}", self.db)
