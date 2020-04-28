@@ -371,6 +371,12 @@ class Client(ChClient):
     def insert_transform_from_table(
         self, from_db, from_table, to_db, to_table, **kwargs
     ):
+        """
+        Перенос из одной таблицы в другую идентичную таблицу
+        с принудительным приведением типов столбцов
+        по типам столбцов целевой таблицы.
+        :return: None
+        """
         column_data = self.describe(to_db, to_table)
         columns_list = []
         for i in column_data:
@@ -516,6 +522,12 @@ class Table(ChClient):
         return self._client.insert_select(self.db, self.table, query, columns, **kwargs)
 
     def insert_transform_from_table(self, from_db, from_table, **kwargs):
+        """
+        Перенос из одной таблицы в другую идентичную таблицу
+        с принудительным приведением типов столбцов
+        по типам столбцов целевой таблицы.
+        :return: None
+        """
         return self._client.insert_transform_from_table(
             from_db, from_table, self.db, self.table, **kwargs
         )
