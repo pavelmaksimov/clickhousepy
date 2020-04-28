@@ -51,6 +51,18 @@ def test():
     assert t.exists() == False
 
 
+def test_DB():
+    TEST_DB = "__clickhousepy_test_db"
+    db = client.create_db(TEST_DB)
+    t = db.create_table_mergetree(
+        TEST_TABLE,
+        columns=['s String', 'd DateTime'],
+        orders=['s'],
+        partition=["s"]
+    )
+    db.drop_db()
+    assert t.exists() == False
+
 
 def test_Table():
     client.drop_table(TEST_DB, TEST_TABLE)

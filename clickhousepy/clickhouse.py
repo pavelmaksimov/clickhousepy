@@ -9,6 +9,9 @@ class Client(ChClient):
         self.kwargs = kwargs
         super().__init__(*args, **kwargs)
 
+    def DB(self, db):
+        return DB(self, db, *self.args, **self.kwargs)
+
     def Table(self, db, table):
         return Table(self, db, table, *self.args, **self.kwargs)
 
@@ -30,7 +33,8 @@ class Client(ChClient):
         )
 
     def create_db(self, db, **kwargs):
-        return self.execute("CREATE DATABASE IF NOT EXISTS {}".format(db), **kwargs)
+        self.execute("CREATE DATABASE IF NOT EXISTS {}".format(db), **kwargs)
+        return DB(self, db, *self.args, **self.kwargs)
 
     def create_table_mergetree(
         self,
@@ -371,6 +375,93 @@ class Client(ChClient):
         return pd.DataFrame(columns=columns, data=result)
 
 
+class DB(ChClient):
+    def __init__(self, client, db, *args, **kwargs):
+        self._client = client or Client
+        self.db = db
+        super().__init__(*args, **kwargs)
+
+    def show_tables(self, like=None, **kwargs):
+        return self._client.show_tables(self.db, like=like, **kwargs)
+
+    def drop_db(self, if_exists=True, **kwargs):
+        return self._client.show_tables(self.db, if_exists=if_exists, **kwargs)
+
+    def create_table_mergetree(
+        self,
+        table,
+        columns,
+        orders,
+        partition=None,
+        sample=None,
+        primary_key=None,
+        ttl=None,
+        if_not_exists=True,
+        extra_before_settings="",
+        engine="MergeTree",
+        settings=None,
+        **kwargs,
+    ):
+        """
+
+        :param db: str
+        :param table: str
+        :param columns: list, list(list) : [...,'Name String ...'] or [...,("Name", "String",...)]
+        :param orders: list
+        :param if_not_exists: bool
+        :param partition: list
+        :param primary_key: list
+        :param sample: list
+        :param ttl: str
+        :param settings: str
+        :param extra_before_settings: str : будет вставлено перед SETTINGS
+        :return: Table
+        """
+        return self._client.create_table_mergetree(
+            self.db,
+            table,
+            columns,
+            orders,
+            partition=partition,
+            sample=sample,
+            primary_key=primary_key,
+            ttl=ttl,
+            if_not_exists=if_not_exists,
+            extra_before_settings=extra_before_settings,
+            engine=engine,
+            settings=settings,
+            **kwargs,
+        )
+
+    def create_table_log(
+        self,
+        table,
+        columns,
+        if_not_exists=True,
+        temporary=False,
+        type_log_table="StripeLog",
+        **kwargs,
+    ):
+        """
+
+        :param db: str
+        :param table: str
+        :param columns: list ['Name String', 'ID UInt32']
+        :param if_not_exists: bool
+        :param temporary: bool
+        :return: Table
+        """
+        return self._client.create_table_log(
+            self.db,
+            table,
+            columns,
+            if_not_exists=if_not_exists,
+            temporary=temporary,
+            type_log_table=type_log_table,
+            **kwargs,
+        )
+
+
 class Table(ChClient):
     def __init__(self, client, db, table, *args, **kwargs):
         self._client = client or Client
@@ -378,7 +469,7 @@ class Table(ChClient):
         self.table = table
         super().__init__(*args, **kwargs)
 
-    def get(self, query, **kwargs):
+    def query(self, query, **kwargs):
         query = query.replace("{db}", self.db)
         query = query.replace("{table}", self.table)
         return self._client.execute(query, **kwargs)
