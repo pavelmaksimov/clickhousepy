@@ -35,7 +35,10 @@ setup(
     author="Pavel Maksimov",
     author_email="vur21@ya.ru",
     url="https://github.com/pavelmaksimov/clickhousepy",
-    install_requires=["clickhouse_driver", "pandas"],
+    install_requires=["clickhouse_driver"],
+    extras_require={
+        "pandas": ["pandas"]
+    },
     packages=[package],
     license="MIT",
     zip_safe=False,
