@@ -19,9 +19,8 @@ class Client(ChClient):
         return self.execute("TRUNCATE TABLE {}.{}".format(db, table), **kwargs)
 
     def exists(self, db, table, **kwargs):
-        return bool(
-            self.execute("EXISTS TABLE {}.{}".format(db, table), **kwargs)[0][0]
-        )
+        r = self.execute("EXISTS TABLE {}.{}".format(db, table), **kwargs)
+        return bool(r[0][0])
 
     def describe(self, db, table, **kwargs):
         return self.execute("DESCRIBE TABLE {}.{}".format(db, table), **kwargs)
@@ -32,8 +31,9 @@ class Client(ChClient):
             **kwargs,
         )
 
-    def create_db(self, db, **kwargs):
-        self.execute("CREATE DATABASE IF NOT EXISTS {}".format(db), **kwargs)
+    def create_db(self, db, if_not_exists=True, **kwargs):
+        exists = "IF NOT EXISTS" if if_not_exists else ""
+        self.execute("CREATE DATABASE {} {}".format(exists, db), **kwargs)
         return DB(self, db, *self.args, **self.kwargs)
 
     def create_table_mergetree(
@@ -56,7 +56,7 @@ class Client(ChClient):
 
         :param db: str
         :param table: str
-        :param columns: list, list(list) : [...,'Name String ...']|[...,("Name", "String",...)]
+        :param columns: list, list(list) : [...,'Name String ...'] or [...,("Name", "String",...)]
         :param orders: list
         :param if_not_exists: bool
         :param partition: list
@@ -65,23 +65,23 @@ class Client(ChClient):
         :param ttl: str
         :param settings: str
         :param extra_before_settings: str : будет вставлено перед SETTINGS
-        :return: None
+        :return: Table
         """
         if primary_key is not None:
             primary_key = ", ".join(primary_key)
-            primary_key = "PRIMARY KEY ({})".format(primary_key)
+            primary_key = "PRIMARY KEY ({})\n".format(primary_key)
         else:
             primary_key = ""
 
         if partition is not None:
             partition = ", ".join(partition)
-            partition = "PARTITION BY ({})".format(partition)
+            partition = "PARTITION BY ({})\n".format(partition)
         else:
             partition = ""
 
         if sample is not None:
             sample = ", ".join(map(str, sample))
-            sample = "SAMPLE BY ({})".format(sample)
+            sample = "SAMPLE BY ({})\n".format(sample)
         else:
             sample = ""
 
@@ -90,15 +90,20 @@ class Client(ChClient):
 
         columns = ",\n\t".join(columns)
         orders = ", ".join(orders)
-        settings = "SETTINGS {}".format(settings) if settings is not None else ""
-        ttl = "TTL {}".format(ttl) if ttl is not None else ""
+        settings = "SETTINGS {}\n".format(settings) if settings is not None else ""
+        ttl = "TTL {}\n".format(ttl) if ttl is not None else ""
         exists = "IF NOT EXISTS" if if_not_exists else ""
 
         query = (
-            "CREATE TABLE "
-            "{exists} {db}.{table} (\n\t{columns}\n) "
-            "ENGINE = {engine} {partition} ORDER BY ({orders}) "
-            "{primary_key} {sample} {ttl} {extra} {settings}"
+            "CREATE TABLE {exists} {db}.{table} "
+            "(\n\t{columns}\n)\n"
+            "ENGINE = {engine}\n"
+            "ORDER BY ({orders})\n"
+            "{partition}"
+            "{primary_key}"
+            "{sample}"
+            "{ttl}"
+            "{extra} {settings}"
         )
         query = query.format(
             exists=exists,
@@ -134,7 +139,7 @@ class Client(ChClient):
         :param columns: list ['Name String', 'ID UInt32']
         :param if_not_exists: bool
         :param temporary: bool
-        :return: None
+        :return: Table
         """
         if not columns:
             raise Exception("Отсутствуют значения в переменной columns")
@@ -144,7 +149,8 @@ class Client(ChClient):
         temporary = "TEMPORARY" if temporary else ""
 
         query = (
-            "CREATE {temporary} TABLE {exists} {db}.{table} ({columns}) "
+            "CREATE {temporary} TABLE {exists} {db}.{table} "
+            "(\n\t{columns}\n)\n"
             "ENGINE = {type_log_table}"
         )
         query = query.format(
@@ -160,9 +166,8 @@ class Client(ChClient):
 
     def copy_table(self, db, table, new_db, new_table, if_not_exists=True, **kwargs):
         exists = "IF NOT EXISTS" if if_not_exists else ""
-        query = "CREATE TABLE {} {}.{} as {}.{}".format(
-            exists, new_db, new_table, db, table
-        )
+        query = "CREATE TABLE {} {}.{} as {}.{}"
+        query = query.format(exists, new_db, new_table, db, table)
         self.execute(query, **kwargs)
         return self.Table(new_db, new_table)
 
@@ -177,16 +182,16 @@ class Client(ChClient):
     def drop_partitions(self, db, table, partitions, **kwargs):
         """
         :param partitions: str or int or list(list)
-             Если ключ таблицы состоит из одного столбца, то можно передать, как str
-             Иначе, как list(list).
+             Если ключ партиции состоит из одного столбца,
+             то можно передать, как str или int, а иначе, как list(list).
              Примеры:  '2018-01-01' или 123 или [...,[12345, '2018-01-01']]
-        :return:
+        :return: None
         """
 
         def _drop_partition(partition_key):
             # Преобразование списка в строку.
             partition_key = [
-                i if type(i) is int else "'{}'".format(i) for i in partition_key
+                i if isinstance(i, int) else "'{}'".format(i) for i in partition_key
             ]
             partition_key = ", ".join(map(str, partition_key))
             query = "ALTER TABLE {}.{} DROP PARTITION ({})".format(
@@ -200,7 +205,7 @@ class Client(ChClient):
         list(map(_drop_partition, partitions))
 
     def is_mutation_done(self, mutation_id, **kwargs):
-        query = "SELECT is_done " "FROM system.mutations " "WHERE mutation_id='{}' "
+        query = "SELECT is_done FROM system.mutations WHERE mutation_id='{}' "
         query = query.format(mutation_id)
         r = self.execute(query, **kwargs)
         return r[0][0] if r else None
@@ -220,6 +225,16 @@ class Client(ChClient):
     def delete(
         self, db, table, where, prevent_parallel_processes=False, sleep=1, **kwargs
     ):
+        """
+
+        :param db:
+        :param table:
+        :param where:
+        :param prevent_parallel_processes: Запрос будет сделан, когда завершатся все мутации таблицы.
+        :param sleep: Интервал проверки завершения всех мутаций таблицы.
+        :param kwargs:
+        :return: None
+        """
         query = "ALTER TABLE {}.{} DELETE WHERE {}".format(db, table, where)
 
         if prevent_parallel_processes:
@@ -244,6 +259,17 @@ class Client(ChClient):
         sleep=1,
         **kwargs,
     ):
+        """
+
+        :param db:
+        :param table:
+        :param update:
+        :param where:
+        :param prevent_parallel_processes: Запрос будет сделан, когда завершатся все мутации таблицы.
+        :param sleep: Интервал проверки завершения всех мутаций таблицы.
+        :param kwargs:
+        :return: None
+        """
         query = """ALTER TABLE {db}.{t} UPDATE {update} WHERE {where}"""
         query = query.format(db=db, t=table, update=update, where=where)
 
@@ -371,7 +397,8 @@ class Client(ChClient):
         import pandas as pd  # pylint: disable=import-error
 
         result = self.execute(query, **kwargs) or [[]]
-        columns = columns_names or ["c{}".format(i + 1) for i in range(len(result[0]))]
+        count_columns = len(result[0])
+        columns = columns_names or ["c{}".format(i + 1) for i in range(count_columns)]
         return pd.DataFrame(columns=columns, data=result)
 
 
@@ -503,6 +530,16 @@ class Table(ChClient):
         return self._client.describe(self.db, self.table, **kwargs)
 
     def delete(self, where, prevent_parallel_processes=False, sleep=1, **kwargs):
+        """
+
+        :param db:
+        :param table:
+        :param where:
+        :param prevent_parallel_processes: Запрос будет сделан, когда завершатся все мутации таблицы.
+        :param sleep: Интервал проверки завершения всех мутаций таблицы.
+        :param kwargs:
+        :return: None
+        """
         return self._client.delete(
             db=self.db,
             table=self.table,
@@ -515,6 +552,17 @@ class Table(ChClient):
     def update(
         self, update, where, prevent_parallel_processes=False, sleep=1, **kwargs
     ):
+        """
+
+        :param db:
+        :param table:
+        :param update:
+        :param where:
+        :param prevent_parallel_processes: Запрос будет сделан, когда завершатся все мутации таблицы.
+        :param sleep: Интервал проверки завершения всех мутаций таблицы.
+        :param kwargs:
+        :return: None
+        """
         return self._client.update(
             db=self.db,
             table=self.table,
@@ -555,10 +603,10 @@ class Table(ChClient):
     def drop_partitions(self, partitions, **kwargs):
         """
         :param partitions: str or int or list(list)
-             Если ключ таблицы состоит из одного столбца, то можно передать, как str
-             Иначе, как list(list).
+             Если ключ партиции состоит из одного столбца,
+             то можно передать, как str или int, а иначе, как list(list).
              Примеры:  '2018-01-01' или 123 или [...,[12345, '2018-01-01']]
-        :return:
+        :return: None
         """
         self._client.drop_partitions(
             self.db, self.table, partitions=partitions, **kwargs
