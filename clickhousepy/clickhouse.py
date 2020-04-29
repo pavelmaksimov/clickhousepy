@@ -16,7 +16,7 @@ class Client(ChClient):
         return Table(self, db, table, *self.args, **self.kwargs)
 
     def test_connection(self, **kwargs):
-        return self.execute("SELECT 1", **kwargs)
+        return bool(self.execute("SELECT 1", **kwargs)[0][0])
 
     def truncate(self, db, table, **kwargs):
         return self.execute("TRUNCATE TABLE {}.{}".format(db, table), **kwargs)
@@ -354,12 +354,13 @@ class Client(ChClient):
         return self.execute(query, **kwargs)
 
     def show_databases(self, **kwargs):
-        return self.execute("SHOW DATABASES", **kwargs)
+        return [i[0] for i in self.execute("SHOW DATABASES", **kwargs)]
 
     def show_tables(self, db=None, like=None, **kwargs):
         db = "FROM {}".format(db) if db else ""
         like = "LIKE '{}'" if like else ""
-        return self.execute("SHOW TABLES {} {}".format(db, like), **kwargs)
+        r = self.execute("SHOW TABLES {} {}".format(db, like), **kwargs)
+        return [i[0] for i in r]
 
     def show_process(self, **kwargs):
         return self.execute("SHOW PROCESSLIST", **kwargs)
