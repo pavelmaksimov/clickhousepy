@@ -61,16 +61,14 @@ class Client(ChClient):
         :param table: str
         :param columns: list, list(list) : [...,'Name String ...'] or [...,("Name", "String",...)]
         :param orders: list
-        :param if_not_exists: bool
         :param partition: list
-        :param primary_key: list
         :param sample: list
+        :param primary_key: list
         :param ttl: str
         :param if_not_exists: bool
         :param extra_before_settings: str : будет вставлено перед SETTINGS
         :param engine: str
         :param settings: str
-        :param extra_before_settings: str : будет вставлено перед SETTINGS
         :return: Table
         """
         if primary_key is not None:
@@ -91,6 +89,8 @@ class Client(ChClient):
         else:
             sample = ""
 
+        if not columns:
+            raise AttributeError("Отсутствуют значения в переменной columns")
         if isinstance(columns[0], (list, tuple)):
             columns = [" ".join(i) for i in columns]
 
@@ -143,7 +143,7 @@ class Client(ChClient):
 
         :param db: str
         :param table: str
-        :param columns: list ['Name String', 'ID UInt32']
+        :param columns: list, list(list) : [...,'Name String ...'] or [...,("Name", "String",...)]
         :param if_not_exists: bool
         :param temporary: bool
         :param engine: str
@@ -151,9 +151,11 @@ class Client(ChClient):
         :return: Table
         """
         if not columns:
-            raise Exception("Отсутствуют значения в переменной columns")
-        columns = ",\n".join(map(str, columns))
+            raise AttributeError("Отсутствуют значения в переменной columns")
+        if isinstance(columns[0], (list, tuple)):
+            columns = [" ".join(i) for i in columns]
 
+        columns = ",\n\t".join(columns)
         exists = "IF NOT EXISTS" if if_not_exists else ""
         temporary = "TEMPORARY" if temporary else ""
 
@@ -190,6 +192,8 @@ class Client(ChClient):
 
     def drop_partitions(self, db, table, partitions, **kwargs):
         """
+        :param db:
+        :param table:
         :param partitions: str or int or list(list)
              Если ключ партиции состоит из одного столбца,
              то можно передать, как str или int, а иначе, как list(list).
@@ -221,7 +225,7 @@ class Client(ChClient):
 
     def _get_last_mutation_id(self, type_mutation, db, table, command, **kwargs):
         command = command.replace("'", "\\'")
-        command = command[command.upper().find(type_mutation) :]
+        command = command[command.upper().find(type_mutation):]
         query = (
             "SELECT mutation_id "
             "FROM system.mutations "
@@ -364,7 +368,8 @@ class Client(ChClient):
         query = "SHOW CREATE TABLE {}.{}".format(db, table)
         return self.execute(query, **kwargs)[0][0]
 
-    def _transform_data_type_sql(self, name, data_type):
+    @staticmethod
+    def _transform_data_type_sql(name, data_type):
         if data_type.find("Array") > -1:
             return name
         elif data_type.find("Int") > -1 or data_type.find("Float") > -1:
@@ -449,17 +454,17 @@ class DB(ChClient):
     ):
         """
 
-        :param db: str
         :param table: str
         :param columns: list, list(list) : [...,'Name String ...'] or [...,("Name", "String",...)]
         :param orders: list
-        :param if_not_exists: bool
         :param partition: list
-        :param primary_key: list
         :param sample: list
+        :param primary_key: list
         :param ttl: str
-        :param settings: str
+        :param if_not_exists: bool
         :param extra_before_settings: str : будет вставлено перед SETTINGS
+        :param engine: str
+        :param settings: str
         :return: Table
         """
         return self._client.create_table_mergetree(
@@ -490,9 +495,8 @@ class DB(ChClient):
     ):
         """
 
-        :param db: str
         :param table: str
-        :param columns: list ['Name String', 'ID UInt32']
+        :param columns: list, list(list) : [...,'Name String ...'] or [...,("Name", "String",...)]
         :param if_not_exists: bool
         :param temporary: bool
         :param engine: str
@@ -560,8 +564,6 @@ class Table(ChClient):
     def delete(self, where, prevent_parallel_processes=False, sleep=1, **kwargs):
         """
 
-        :param db:
-        :param table:
         :param where:
         :param prevent_parallel_processes: Запрос будет сделан, когда завершатся все мутации таблицы.
         :param sleep: Интервал проверки завершения всех мутаций таблицы.
@@ -582,8 +584,6 @@ class Table(ChClient):
     ):
         """
 
-        :param db:
-        :param table:
         :param update:
         :param where:
         :param prevent_parallel_processes: Запрос будет сделан, когда завершатся все мутации таблицы.
