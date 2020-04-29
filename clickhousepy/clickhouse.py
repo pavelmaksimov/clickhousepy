@@ -66,6 +66,9 @@ class Client(ChClient):
         :param primary_key: list
         :param sample: list
         :param ttl: str
+        :param if_not_exists: bool
+        :param extra_before_settings: str : будет вставлено перед SETTINGS
+        :param engine: str
         :param settings: str
         :param extra_before_settings: str : будет вставлено перед SETTINGS
         :return: Table
@@ -132,7 +135,8 @@ class Client(ChClient):
         columns,
         if_not_exists=True,
         temporary=False,
-        type_log_table="StripeLog",
+        engine="StripeLog",
+        type_log_table=None,
         **kwargs,
     ):
         """
@@ -142,6 +146,8 @@ class Client(ChClient):
         :param columns: list ['Name String', 'ID UInt32']
         :param if_not_exists: bool
         :param temporary: bool
+        :param engine: str
+        :param type_log_table: : параметр более не поддерживается. Но остался для совместимости.
         :return: Table
         """
         if not columns:
@@ -154,7 +160,7 @@ class Client(ChClient):
         query = (
             "CREATE {temporary} TABLE {exists} {db}.{table} "
             "(\n\t{columns}\n)\n"
-            "ENGINE = {type_log_table}"
+            "ENGINE = {engine}"
         )
         query = query.format(
             temporary=temporary,
@@ -162,7 +168,7 @@ class Client(ChClient):
             columns=columns,
             db=db,
             table=table,
-            type_log_table=type_log_table,
+            engine=type_log_table or engine,
         )
         self.execute(query, **kwargs)
         return self.Table(db, table)
@@ -478,7 +484,8 @@ class DB(ChClient):
         columns,
         if_not_exists=True,
         temporary=False,
-        type_log_table="StripeLog",
+        engine="StripeLog",
+        type_log_table=None,
         **kwargs,
     ):
         """
@@ -488,6 +495,8 @@ class DB(ChClient):
         :param columns: list ['Name String', 'ID UInt32']
         :param if_not_exists: bool
         :param temporary: bool
+        :param engine: str
+        :param type_log_table: : параметр более не поддерживается. Но остался для совместимости.
         :return: Table
         """
         return self._client.create_table_log(
@@ -496,6 +505,7 @@ class DB(ChClient):
             columns,
             if_not_exists=if_not_exists,
             temporary=temporary,
+            engine=engine,
             type_log_table=type_log_table,
             **kwargs,
         )
