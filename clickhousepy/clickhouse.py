@@ -15,6 +15,9 @@ class Client(ChClient):
     def Table(self, db, table):
         return Table(self, db, table, *self.args, **self.kwargs)
 
+    def test_connection(self, **kwargs):
+        return self.execute("SELECT 1", **kwargs)
+
     def truncate(self, db, table, **kwargs):
         return self.execute("TRUNCATE TABLE {}.{}".format(db, table), **kwargs)
 
