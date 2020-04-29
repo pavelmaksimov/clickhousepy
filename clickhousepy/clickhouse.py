@@ -29,10 +29,11 @@ class Client(ChClient):
         return self.execute("DESCRIBE TABLE {}.{}".format(db, table), **kwargs)
 
     def rename(self, db, table, new_db, new_table, **kwargs):
-        return self.execute(
+        self.execute(
             """RENAME TABLE {}.{} TO {}.{}""".format(db, table, new_db, new_table),
             **kwargs,
         )
+        return self.Table(new_db, new_table)
 
     def create_db(self, db, if_not_exists=True, **kwargs):
         exists = "IF NOT EXISTS" if if_not_exists else ""
