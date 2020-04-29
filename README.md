@@ -1,5 +1,7 @@
 ## Python обертка для запросов в БД [Clickhouse](https://clickhouse.yandex/)
 
+Обертка сделана вокруг [clickhouse-driver](https://clickhouse-driver.readthedocs.io)
+
 Написано на версии python 3.5
 
 ## Установка
@@ -10,7 +12,7 @@ pip install clickhousepy[pandas]  (для установки pandas)
 ```
 
 
-## Краткая документация по некоторым методам.
+## Краткая документация по некоторым методам
 ```python
 from clickhousepy import Client
 import datetime as dt
@@ -34,11 +36,16 @@ client.insert(
     TEST_DB, TEST_TABLE,
     [{"s": "1"}],
     columns=["s"],  # columns необязательный параметр
-)
+) 
+# Здесь подробно о формате, вставляемых данных.
+# https://clickhouse-driver.readthedocs.io/en/latest/quickstart.html#inserting-data
+
 r = client.get_count_rows(TEST_DB, TEST_TABLE)
 print("кол-во строк:", r)
+
 r = client.execute("SELECT * FROM {}.{}".format(TEST_DB, TEST_TABLE))
 print("данные запроса:", r)
+
 r = client.get_df("SELECT * FROM {}.{}".format(TEST_DB, TEST_TABLE), columns_names=["S"])
 print("данные запроса в формате dataframe:", type(r), r)
 
