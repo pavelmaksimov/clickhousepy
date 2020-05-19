@@ -158,3 +158,13 @@ db.drop_db()
 ## Зависимости
 - [clickhouse-driver](https://github.com/mymarilyn/clickhouse-driver/)
 - [pandas](https://github.com/pandas-dev/pandas) (Опционально)
+
+## Автор
+Павел Максимов
+
+Связаться со мной можно в 
+[Телеграм](https://teleg.run/pavel_maksimow) 
+и в 
+[Facebook](https://www.facebook.com/pavel.maksimow)
+
+Удачи тебе, друг! Поставь звездочку ;)
