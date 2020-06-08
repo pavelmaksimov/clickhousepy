@@ -564,6 +564,9 @@ class Table(ChClient):
     def get_df(self, query, columns_names=None, **kwargs):
         query = query.replace("{db}", self.db)
         query = query.replace("{table}", self.table)
+        if columns_names is None:
+            columns = self.describe(**kwargs)
+            columns_names = [i[0] for i in columns]
         return self._client.get_df(query, columns_names, **kwargs)
 
     def insert(self, data, columns=None, **kwargs):

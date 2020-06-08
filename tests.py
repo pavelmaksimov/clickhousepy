@@ -215,10 +215,13 @@ def test_insert_transform_from_table():
 
 def test_get_df():
     if find_spec("pandas"):
-        r = client.get_df(
-            "SELECT arrayJoin({0}) as a, arrayJoin({0}) as ba".format(list(range(10)))
+        query = "SELECT arrayJoin({0}) as a, arrayJoin({0}) as ba".format(
+            list(range(3))
         )
-        print(r.columns)
+        r = client.get_df(query)
+        print(r)
+
+        r = client.get_df(query, columns_names=["col1", "col2"])
         print(r)
 
 
