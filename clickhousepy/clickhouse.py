@@ -1,6 +1,10 @@
 # -*- coding: utf-8 -*-
-from clickhouse_driver import Client as ChClient
+import logging
 import time
+
+from clickhouse_driver import Client as ChClient
+
+logging.basicConfig(level=logging.INFO)
 
 
 class Client(ChClient):
@@ -182,6 +186,34 @@ class Client(ChClient):
         query = query.format(exists, new_db, new_table, db, table)
         self.execute(query, **kwargs)
         return self.Table(new_db, new_table)
+
+    def copy_data(
+        self, from_db, from_table, to_db, to_table, where=None, columns=None, **kwargs
+    ):
+        if not self.exists(to_db, to_table, **kwargs):
+            self.copy_table(from_db, from_table, to_db, to_table, **kwargs)
+        where_ = "WHERE {}".format(where) if where else ""
+        if columns and isinstance(columns, (list, tuple)):
+            columns = ",\n\t".join(columns)
+            columns = "(\n\t{}\n)\n".format(columns)
+        elif columns is None:
+            columns = ""
+        else:
+            raise TypeError("параметр columns принимается только, как list и tuple")
+
+        self.execute(
+            "INSERT INTO {}.{} {} SELECT {} FROM {}.{} {}".format(
+                to_db, to_table, columns, columns, from_db, from_table, where_
+            ),
+            **kwargs,
+        )
+
+        count_rows1 = self.get_count_rows(from_db, from_table, where=where)
+        count_rows2 = self.get_count_rows(to_db, to_table, where=where)
+        is_identic = count_rows1 == count_rows2
+        if not is_identic:
+            logging.warning("Кол-во строк, после копирования данных НЕ СОВПАДАЮТ")
+        return is_identic
 
     def drop_db(self, db, if_exists=True, **kwargs):
         exists = "IF EXISTS" if if_exists else ""
@@ -601,6 +633,11 @@ class Table(ChClient):
             prevent_parallel_processes=prevent_parallel_processes,
             sleep=sleep,
             **kwargs,
+        )
+
+    def copy_data_from(self, from_db, from_table, where=None, columns=None, **kwargs):
+        return self._client.copy_data(
+            from_db, from_table, self.db, self.table, where, columns, **kwargs
         )
 
     def get_count_rows(self, where=None, **kwargs):

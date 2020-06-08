@@ -76,6 +76,35 @@ def test_Table():
     assert t.exists() == False
 
 
+def test_copy_data():
+    test_table2 = TEST_TABLE + "_copy"
+    client.drop_table(TEST_DB, TEST_TABLE)
+    client.drop_table(TEST_DB, test_table2)
+    t = client.create_table_mergetree(
+        TEST_DB,
+        TEST_TABLE,
+        columns=["s String", "d DateTime"],
+        orders=["s"],
+        partition=["s"],
+    )
+    t.insert(
+        [
+            {"s": "S1", "d": dt.datetime(2000, 1, 1)},
+            {"s": "S2", "d": dt.datetime(2000, 1, 2)},
+            {"s": "S3", "d": dt.datetime(2000, 1, 3)},
+        ],
+        columns=["s", "d"],
+    )
+    t2 = t.copy_table(TEST_DB, test_table2, return_new_table=True)
+    is_identic = t2.copy_data_from(
+        TEST_DB, TEST_TABLE, where="s != 'S3' ", columns=("s",)
+    )
+    print(t2.select(columns=("s",)))
+    assert True == is_identic
+    t.drop_table()
+    t2.drop_table()
+
+
 def test_drop_partitions_str():
     client.drop_table(TEST_DB, TEST_TABLE)
     client.create_table_mergetree(
@@ -88,13 +117,13 @@ def test_drop_partitions_str():
     t = client.Table(TEST_DB, TEST_TABLE)
     t.insert(
         [
-            {"s": "1", "d": dt.datetime(2000, 1, 1)},
-            {"s": "2", "d": dt.datetime(2000, 1, 2)},
-            {"s": "3", "d": dt.datetime(2000, 1, 3)},
+            {"s": "S1", "d": dt.datetime(2000, 1, 1)},
+            {"s": "S2", "d": dt.datetime(2000, 1, 2)},
+            {"s": "S3", "d": dt.datetime(2000, 1, 3)},
         ],
         columns=["s", "d"],
     )
-    t.drop_partitions([["2"], ["3"]])
+    t.drop_partitions([["S2"], ["S3"]])
     time.sleep(1)
     assert t.get_count_rows() == 1
     t.truncate()
@@ -114,13 +143,13 @@ def test_drop_partitions_list():
     t = client.Table(TEST_DB, TEST_TABLE)
     t.insert(
         [
-            {"s": "1", "d": dt.datetime(2000, 1, 1)},
-            {"s": "2", "d": dt.datetime(2000, 1, 2)},
-            {"s": "3", "d": dt.datetime(2000, 1, 3)},
+            {"s": "S1", "d": dt.datetime(2000, 1, 1)},
+            {"s": "S2", "d": dt.datetime(2000, 1, 2)},
+            {"s": "S3", "d": dt.datetime(2000, 1, 3)},
         ],
         columns=["s", "d"],
     )
-    t.drop_partitions([["2", "2000-01-02"], ["3", "2000-01-03"]])
+    t.drop_partitions([["S2", "2000-01-02"], ["S3", "2000-01-03"]])
     time.sleep(1)
     assert t.get_count_rows() == 1
     t.truncate()
