@@ -12,6 +12,31 @@ pip install clickhousepy[pandas]  (для установки pandas)
 ```
 
 
+## Получение данных из Clickhouse в формате Pandas Dataframe
+```python
+from clickhousepy import Client
+import datetime as dt
+
+TEST_DB = "__chpytest12345"
+TEST_TABLE = "__chpytest12345"
+
+
+client.create_db(TEST_DB)
+client.create_table_mergetree(
+    TEST_DB, TEST_TABLE,
+    columns=["s String"],
+    orders=["s"],
+)
+client.insert(
+    TEST_DB, TEST_TABLE,
+    [{"s": "1"}],
+    columns=["s"],  # columns необязательный параметр
+) 
+query = "SELECT s FROM {}.{}".format(TEST_DB, TEST_TABLE)
+r = client.get_df(query, columns_names=["Col S"])
+print("данные в формате dataframe:\n", r)
+```
+
 ## Краткая документация по некоторым методам
 ```python
 from clickhousepy import Client
@@ -46,8 +71,8 @@ print("кол-во строк:", r)
 r = client.execute("SELECT * FROM {}.{}".format(TEST_DB, TEST_TABLE))
 print("данные запроса:", r)
 
-r = client.get_df("SELECT * FROM {}.{}".format(TEST_DB, TEST_TABLE), columns_names=["S"])
-print("данные запроса в формате dataframe:", type(r), r)
+r = client.get_df("SELECT * FROM {}.{}".format(TEST_DB, TEST_TABLE), columns_names=["Col S"])
+print("данные в формате dataframe:", type(r), r)
 
 
 ## Можно инициализировать класс DB и Table и получить лучше читаемый код.
