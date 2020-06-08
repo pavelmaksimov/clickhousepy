@@ -656,8 +656,21 @@ class Table(ChClient):
             self.db, self.table, where, date_column_name, **kwargs
         )
 
-    def copy_table(self, new_db, new_table, **kwargs):
-        return self._client.copy_table(new_db, new_table, **kwargs)
+    def copy_table(self, new_db, new_table, return_new_table=False, **kwargs):
+        """
+
+        :param new_db:
+        :param new_table:
+        :param return_new_table: Возвратит новый класс Table
+        :param kwargs:
+        :return: None, Table
+        """
+        Table = self._client.copy_table(
+            self.db, self.table, new_db, new_table, **kwargs
+        )
+        if return_new_table:
+            return Table
+        return None
 
     def optimize_table(self, **kwargs):
         return self._client.optimize_table(self.db, self.table, **kwargs)
