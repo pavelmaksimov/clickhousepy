@@ -703,3 +703,18 @@ class Table(ChClient):
 
     def show_create_table(self, **kwargs):
         return self._client.show_create_table(self.db, self.table, **kwargs)
+
+    def select(self, limit=10, columns=None, where=None, **kwargs):
+        where = "WHERE {}".format(where) if where else ""
+        if columns and isinstance(columns, (tuple, list)):
+            columns_ = ",\n\t".join(columns)
+            columns_ = "(\n\t{}\n)\n".format(columns_)
+        elif columns is None:
+            columns_ = "*"
+        else:
+            raise TypeError("параметр columns принимается только, как list и tuple")
+
+        query = "SELECT {} FROM {{db}}.{{table}} {} LIMIT {}".format(
+            columns_, where, limit
+        )
+        return self.get_df(query, columns, **kwargs)
