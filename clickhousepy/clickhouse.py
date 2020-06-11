@@ -196,14 +196,16 @@ class Client(ChClient):
         if columns and isinstance(columns, (list, tuple)):
             columns = ",\n\t".join(columns)
             columns = "(\n\t{}\n)\n".format(columns)
+            from_columns = columns
         elif columns is None:
             columns = ""
+            from_columns = "*"
         else:
             raise TypeError("параметр columns принимается только, как list и tuple")
 
         self.execute(
             "INSERT INTO {}.{} {} SELECT {} FROM {}.{} {}".format(
-                to_db, to_table, columns, columns, from_db, from_table, where_
+                to_db, to_table, columns, from_columns, from_db, from_table, where_
             ),
             **kwargs,
         )
