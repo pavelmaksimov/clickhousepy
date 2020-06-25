@@ -163,17 +163,13 @@ print("кол-во строк после очистки таблицы:", r)
 
 new_table_name = TEST_TABLE + "_new"
 print("переименование таблицы {} в {}".format(TEST_TABLE, new_table_name))
-new_table = table.rename(TEST_DB, new_table_name)
+table.rename(TEST_DB, new_table_name)
 
-r = table.exists()
+r = client.exists(TEST_DB, TEST_TABLE)
 print("существует таблица {}?".format(TEST_TABLE), r)
-
-r = new_table.exists()
-print("существует таблица {}?".format(new_table_name), r)
 
 print("удаление таблиц")
 table.drop_table()
-new_table.drop_table()
 
 print("удаление базы данных")
 db.drop_db()

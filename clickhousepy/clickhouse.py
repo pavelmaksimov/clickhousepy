@@ -592,7 +592,9 @@ class Table(ChClient):
         return self._client.exists(self.db, self.table, **kwargs)
 
     def rename(self, new_db, new_table, **kwargs):
-        return self._client.rename(self.db, self.table, new_db, new_table, **kwargs)
+        t = self._client.rename(self.db, self.table, new_db, new_table, **kwargs)
+        self.db, self.table = new_db, new_table
+        return t
 
     def truncate(self, **kwargs):
         return self._client.truncate(self.db, self.table, **kwargs)
