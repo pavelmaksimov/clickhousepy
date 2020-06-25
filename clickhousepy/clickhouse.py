@@ -238,19 +238,25 @@ class Client(ChClient):
             ),
             **kwargs,
         )
+        count_rows1 = self.get_count_rows(from_db, from_table, where=where)
+        count_rows2 = self.get_count_rows(to_db, to_table, where=where)
         if not distinct:
-            count_rows1 = self.get_count_rows(from_db, from_table, where=where)
-            count_rows2 = self.get_count_rows(to_db, to_table, where=where)
             is_identic = count_rows1 == count_rows2
             if not is_identic:
                 logging.warning(
-                    "Кол-во строк, после копирования данных НЕ СОВПАДАЮТ\n",
-                    "В источнике строк: {}, скопировано строк {}".format(count_rows1, count_rows2)
+                    "Кол-во строк, после копирования данных НЕ СОВПАДАЮТ. "
+                    "Строк в таблице источнике: {}, скопировано строк {}."
+                        .format(count_rows1, count_rows2)
                 )
             else:
                 logging.info("Скопировано строк: {}".format(count_rows1))
             return is_identic
         else:
+            logging.info(
+                "Кол-во строк в таблице источнике: {}. "
+                "Кол-во скопированных строк без дубликатов: {}."
+                    .format(count_rows1, count_rows2)
+            )
             return None
 
     def drop_db(self, db, if_exists=True, **kwargs):
