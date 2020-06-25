@@ -243,7 +243,12 @@ class Client(ChClient):
             count_rows2 = self.get_count_rows(to_db, to_table, where=where)
             is_identic = count_rows1 == count_rows2
             if not is_identic:
-                logging.warning("Кол-во строк, после копирования данных НЕ СОВПАДАЮТ")
+                logging.warning(
+                    "Кол-во строк, после копирования данных НЕ СОВПАДАЮТ\n",
+                    "В источнике строк: {}, скопировано строк {}".format(count_rows1, count_rows2)
+                )
+            else:
+                logging.info("Скопировано строк: {}".format(count_rows1))
             return is_identic
         else:
             return None
