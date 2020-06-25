@@ -92,6 +92,7 @@ def test_copy_data():
             {"s": "S1", "d": dt.datetime(2000, 1, 1)},
             {"s": "S2", "d": dt.datetime(2000, 1, 2)},
             {"s": "S3", "d": dt.datetime(2000, 1, 3)},
+            {"s": "S3", "d": dt.datetime(2000, 1, 3)},
         ],
         columns=["s", "d"],
     )
@@ -101,6 +102,13 @@ def test_copy_data():
     )
     print(t2.select(columns=("s",)))
     assert True == is_identic
+    t2.truncate()
+    # Проверка удаления дублирующихся строк.
+    t2.copy_data_from(
+        TEST_DB, TEST_TABLE, columns=("s",), distinct=True
+    )
+    assert 3 == t2.get_count_rows()
+
     t.drop_table()
     t2.drop_table()
 

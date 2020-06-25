@@ -188,18 +188,47 @@ class Client(ChClient):
         return self.Table(new_db, new_table)
 
     def copy_data(
-        self, from_db, from_table, to_db, to_table, where=None, columns=None, **kwargs
+        self,
+        from_db,
+        from_table,
+        to_db,
+        to_table,
+        where=None,
+        columns=None,
+        distinct=False,
+        **kwargs,
     ):
+        """
+        Копирование данных. Целевая таблица создается автоматически, если отсутствует.
+        После копирования проверяется, кол-во строк, если не включен параметр distinct,
+        который удаляет дубликаты строк.
+
+        :param from_db:
+        :param from_table:
+        :param to_db:
+        :param to_table:
+        :param where:
+        :param columns:
+        :param distinct: bool : Будет удалять дублирующиеся строки при копировании
+        :param kwargs:
+        :return: True, False и None при distinct=True
+        """
         if not self.exists(to_db, to_table, **kwargs):
             self.copy_table(from_db, from_table, to_db, to_table, **kwargs)
         where_ = "WHERE {}".format(where) if where else ""
         if columns and isinstance(columns, (list, tuple)):
             columns = ",\n\t".join(columns)
             columns = "(\n\t{}\n)\n".format(columns)
-            from_columns = columns
+            if distinct:
+                from_columns = "DISTINCT {}".format(columns)
+            else:
+                from_columns = columns
         elif columns is None:
             columns = ""
-            from_columns = "*"
+            if distinct:
+                from_columns = "DISTINCT *".format(columns)
+            else:
+                from_columns = "*"
         else:
             raise TypeError("параметр columns принимается только, как list и tuple")
 
@@ -209,13 +238,15 @@ class Client(ChClient):
             ),
             **kwargs,
         )
-
-        count_rows1 = self.get_count_rows(from_db, from_table, where=where)
-        count_rows2 = self.get_count_rows(to_db, to_table, where=where)
-        is_identic = count_rows1 == count_rows2
-        if not is_identic:
-            logging.warning("Кол-во строк, после копирования данных НЕ СОВПАДАЮТ")
-        return is_identic
+        if not distinct:
+            count_rows1 = self.get_count_rows(from_db, from_table, where=where)
+            count_rows2 = self.get_count_rows(to_db, to_table, where=where)
+            is_identic = count_rows1 == count_rows2
+            if not is_identic:
+                logging.warning("Кол-во строк, после копирования данных НЕ СОВПАДАЮТ")
+            return is_identic
+        else:
+            return None
 
     def drop_db(self, db, if_exists=True, **kwargs):
         exists = "IF EXISTS" if if_exists else ""
@@ -642,9 +673,24 @@ class Table(ChClient):
             **kwargs,
         )
 
-    def copy_data_from(self, from_db, from_table, where=None, columns=None, **kwargs):
+    def copy_data_from(
+        self, from_db, from_table, where=None, columns=None, distinct=False, **kwargs
+    ):
+        """
+        Копирование данных. Целевая таблица создается автоматически, если отсутствует.
+        После копирования проверяется, кол-во строк, если не включен параметр distinct,
+        который удаляет дубликаты строк.
+
+        :param from_db:
+        :param from_table:
+        :param where:
+        :param columns:
+        :param distinct: bool : Будет удалять дублирующиеся строки при копировании
+        :param kwargs:
+        :return: True, False и None при distinct=True
+        """
         return self._client.copy_data(
-            from_db, from_table, self.db, self.table, where, columns, **kwargs
+            from_db, from_table, self.db, self.table, where, columns, distinct, **kwargs
         )
 
     def get_count_rows(self, where=None, **kwargs):
