@@ -217,16 +217,16 @@ class Client(ChClient):
             self.copy_table(from_db, from_table, to_db, to_table, **kwargs)
         where_ = "WHERE {}".format(where) if where else ""
         if columns and isinstance(columns, (list, tuple)):
-            columns = ",\n\t".join(columns)
-            columns = "(\n\t{}\n)\n".format(columns)
+            columns_ = ",\n\t".join(columns)
             if distinct:
-                from_columns = "DISTINCT {}".format(columns)
+                from_columns = "DISTINCT {}".format(columns_)
             else:
-                from_columns = columns
+                from_columns = columns_
+            columns = "(\n\t{}\n)\n".format(columns_)
         elif columns is None:
             columns = ""
             if distinct:
-                from_columns = "DISTINCT *".format(columns)
+                from_columns = "DISTINCT *"
             else:
                 from_columns = "*"
         else:
@@ -245,8 +245,9 @@ class Client(ChClient):
             if not is_identic:
                 logging.warning(
                     "Кол-во строк, после копирования данных НЕ СОВПАДАЮТ. "
-                    "Строк в таблице источнике: {}, скопировано строк {}."
-                        .format(count_rows1, count_rows2)
+                    "Строк в таблице источнике: {}, скопировано строк {}.".format(
+                        count_rows1, count_rows2
+                    )
                 )
             else:
                 logging.info("Скопировано строк: {}".format(count_rows1))
@@ -254,8 +255,9 @@ class Client(ChClient):
         else:
             logging.info(
                 "Кол-во строк в таблице источнике: {}. "
-                "Кол-во скопированных строк без дубликатов: {}."
-                    .format(count_rows1, count_rows2)
+                "Кол-во скопированных строк без дубликатов: {}.".format(
+                    count_rows1, count_rows2
+                )
             )
             return None
 
