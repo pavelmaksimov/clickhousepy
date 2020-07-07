@@ -493,13 +493,70 @@ class Client(ChClient):
         query = "INSERT INTO {}.{} {} {}".format(db, table, columns_str, query)
         return self.execute(query, **kwargs)
 
-    def get_df(self, query, columns_names=None, **kwargs):
+    def get_df(self, query, columns_names=None, dtype=None, **kwargs):
+        """
+
+        :param query: str
+        :param columns_names: list, tuple : названия столбцов для DataFrame
+        :param dtype: object type : параметр передается при создании dataframe для определения типа столбцов
+        :param kwargs:
+        :return:
+        """
         import pandas as pd  # pylint: disable=import-error
 
         result = self.execute(query, **kwargs) or [[]]
-        count_columns = len(result[0])
-        columns = columns_names or ["c{}".format(i + 1) for i in range(count_columns)]
-        return pd.DataFrame(columns=columns, data=result)
+        return pd.DataFrame(data=result, columns=columns_names, dtype=dtype)
+
+    def _generate_select(self, db, table, limit=10, offset=0, columns=None, where=None):
+        """Формирование запроса."""
+        where = "WHERE {}".format(where) if where else ""
+        if columns and isinstance(columns, (tuple, list)):
+            columns_ = ",\n\t".join(columns)
+            columns_ = "(\n\t{}\n)\n".format(columns_)
+        elif columns is None:
+            columns_ = "*"
+        else:
+            raise TypeError("параметр columns принимается только, как list и tuple")
+
+        query = "SELECT {} FROM {}.{} {} LIMIT {} OFFSET {}".format(
+            columns_, db, table, where, limit, offset
+        )
+        return query
+
+    def select(self, db, table, limit=10, offset=0, columns=None, where=None, **kwargs):
+        """
+        Выводит строки таблицы.
+
+        :param db: str
+        :param table: str
+        :param limit: int
+        :param offset: int
+        :param columns: list, tuple, None
+        :param where: str
+        :return: list
+        """
+        query = self._generate_select(db, table, limit, offset, columns, where)
+        return self.execute(query, **kwargs)
+
+    def select_df(self, db, table, limit=10, offset=0, columns=None, where=None, dtype=None, **kwargs):
+        """
+        Выводит строки таблицы.
+
+        :param db: str
+        :param table: str
+        :param limit: int
+        :param offset: int
+        :param columns: list, tuple, None
+        :param where: str
+        :param dtype: object type : параметр передается при создании dataframe для определения типа столбцов датафрейма
+        :return: DataFrame
+        """
+        query = self._generate_select(db, table, limit, offset, columns, where)
+        if columns is None:
+            # Если названия столбцов не переданы, возьмет их из описания таблицы.
+            columns_data = self.describe(db, table, **kwargs)
+            columns = [i[0] for i in columns_data]
+        return self.get_df(query, columns_names=columns, dtype=dtype, **kwargs)
 
 
 class DB(ChClient):
@@ -602,18 +659,30 @@ class Table(ChClient):
         self.table = table
         super().__init__(*args, **kwargs)
 
-    def query(self, query, **kwargs):
-        query = query.replace("{db}", self.db)
-        query = query.replace("{table}", self.table)
-        return self._client.execute(query, **kwargs)
+    def select(self, limit=10, offset=0, columns=None, where=None, **kwargs):
+        """
+        Выводит строки таблицы.
 
-    def get_df(self, query, columns_names=None, **kwargs):
-        query = query.replace("{db}", self.db)
-        query = query.replace("{table}", self.table)
-        if columns_names is None:
-            columns = self.describe(**kwargs)
-            columns_names = [i[0] for i in columns]
-        return self._client.get_df(query, columns_names, **kwargs)
+        :param limit: int
+        :param offset: int
+        :param columns: list, tuple, None
+        :param where: str
+        :return: list
+        """
+        return self._client.select(self.db, self.table, limit, offset, columns, where, **kwargs)
+
+    def select_df(self, limit=10, offset=0, columns=None, where=None, dtype=None, **kwargs):
+        """
+        Выводит строки таблицы.
+
+        :param limit: int
+        :param offset: int
+        :param columns: list, tuple, None
+        :param where: str
+        :param dtype: object type : параметр передается при создании dataframe для определения типа столбцов датафрейма
+        :return: DataFrame
+        """
+        return self._client.select_df(self.db, self.table, limit, offset, columns, where, dtype, **kwargs)
 
     def insert(self, data, columns=None, **kwargs):
         return self._client.insert(self.db, self.table, data, columns, **kwargs)
