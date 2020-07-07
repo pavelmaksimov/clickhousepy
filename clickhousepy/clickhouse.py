@@ -319,6 +319,32 @@ class Client(ChClient):
         r = self.execute(query, **kwargs)
         return r[0][0] if r else None
 
+    def get_mutations(self, limit=10, offset=0, columns=None, where=None, order_by="create_time DESC", **kwargs):
+        """
+        Выводит строки таблицы.
+
+        :param limit: int
+        :param offset: int
+        :param columns: list, tuple, None
+        :param where: str
+        :param order_by: str
+        :return: list
+        """
+        return self.select("system", "mutations", limit, offset, columns, where, order_by, **kwargs)
+
+    def get_mutations_df(self, limit=10, offset=0, columns=None, where=None, order_by="create_time DESC", **kwargs):
+        """
+        Выводит строки таблицы.
+
+        :param limit: int
+        :param offset: int
+        :param columns: list, tuple, None
+        :param where: str
+        :param order_by: str
+        :return: list
+        """
+        return self.select_df("system", "mutations", limit, offset, columns, where, order_by, **kwargs)
+
     def delete(
         self, db, table, where, prevent_parallel_processes=False, sleep=1, **kwargs
     ):
@@ -512,23 +538,24 @@ class Client(ChClient):
         result = self.execute(query, **kwargs) or [[]]
         return pd.DataFrame(data=result, columns=columns_names, dtype=dtype)
 
-    def _generate_select(self, db, table, limit=10, offset=0, columns=None, where=None):
+    def _generate_select(self, db, table, limit=10, offset=0, columns=None, where=None, order_by=None):
         """Формирование запроса."""
-        where = "WHERE {}".format(where) if where else ""
+        where = "WHERE {}\n".format(where) if where else ""
+        order_by = "ORDER BY {}\n".format(order_by) if order_by else ""
         if columns and isinstance(columns, (tuple, list)):
             columns_ = ",\n\t".join(columns)
-            columns_ = "(\n\t{}\n)\n".format(columns_)
+            columns_ = "\n\t{}\n".format(columns_)
         elif columns is None:
             columns_ = "*"
         else:
             raise TypeError("параметр columns принимается только, как list и tuple")
 
-        query = "SELECT {} FROM {}.{} {} LIMIT {} OFFSET {}".format(
-            columns_, db, table, where, limit, offset
+        query = "SELECT {}\nFROM {}.{}\n{}{}LIMIT {} OFFSET {}".format(
+            columns_, db, table, where, order_by, limit, offset
         )
         return query
 
-    def select(self, db, table, limit=10, offset=0, columns=None, where=None, **kwargs):
+    def select(self, db, table, limit=10, offset=0, columns=None, where=None, order_by=None, **kwargs):
         """
         Выводит строки таблицы.
 
@@ -538,12 +565,13 @@ class Client(ChClient):
         :param offset: int
         :param columns: list, tuple, None
         :param where: str
+        :param order_by: str
         :return: list
         """
-        query = self._generate_select(db, table, limit, offset, columns, where)
+        query = self._generate_select(db, table, limit, offset, columns, where, order_by)
         return self.execute(query, **kwargs)
 
-    def select_df(self, db, table, limit=10, offset=0, columns=None, where=None, dtype=None, **kwargs):
+    def select_df(self, db, table, limit=10, offset=0, columns=None, where=None, order_by=None, dtype=None, **kwargs):
         """
         Выводит строки таблицы.
 
@@ -553,10 +581,11 @@ class Client(ChClient):
         :param offset: int
         :param columns: list, tuple, None
         :param where: str
+        :param order_by: str
         :param dtype: object type : параметр передается при создании dataframe для определения типа столбцов датафрейма
         :return: DataFrame
         """
-        query = self._generate_select(db, table, limit, offset, columns, where)
+        query = self._generate_select(db, table, limit, offset, columns, where, order_by)
         if columns is None:
             # Если названия столбцов не переданы, возьмет их из описания таблицы.
             columns_data = self.describe(db, table, **kwargs)

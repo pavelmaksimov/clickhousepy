@@ -130,6 +130,16 @@ def test_show():
     client.drop_db(TEST_DB)
 
 
+def test_get_mutations():
+    r = client.get_mutations(limit=1, columnar=True)
+    pprint(r)
+
+
+def test_get_mutations_df():
+    r = client.get_mutations_df(columns=["database", "table", "is_done"])
+    pprint(r)
+
+
 @_decorator_function
 def test_mutation_update(db, table):
     table.update(
@@ -184,8 +194,8 @@ def test_select(db, table):
     data = table.select(limit=1)
     data = table.select(limit=1, offset=1)
     data = table.select(limit=1, offset=1, columns=["integer"])
-    data = table.select(limit=1, offset=1, columns=["integer"], where="string='c'")
-    assert data == [(3,)]
+    data = table.select(limit=1, offset=1, columns=["integer", "string"], where="string='c'")
+    assert data == [(3,"c")]
 
 
 @_decorator_function
