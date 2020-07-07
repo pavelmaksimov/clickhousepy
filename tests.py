@@ -172,7 +172,6 @@ def test_insert_transform_from_table(db, table):
     assert ['1', '2', '3', '3'] == tdata
 
 
-
 @_decorator_function
 def test_insert_select(db, table):
     # client.insert_select()
@@ -185,7 +184,6 @@ def test_insert_select(db, table):
         table.select_df()
     )
     assert table.get_count_rows() == 16
-
 
 
 @_decorator_function

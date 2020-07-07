@@ -79,6 +79,7 @@ class Client(ChClient):
         :param extra_before_settings: str : будет вставлено перед SETTINGS
         :param engine: str
         :param settings: str
+        :param kwargs: параметры принимаемые библиотекой clickhouse_driver
         :return: Table
         """
         if primary_key is not None:
@@ -158,6 +159,7 @@ class Client(ChClient):
         :param temporary: bool
         :param engine: str
         :param type_log_table: : параметр более не поддерживается. Но остался для совместимости.
+        :param kwargs: параметры принимаемые библиотекой clickhouse_driver
         :return: Table
         """
         if not columns:
@@ -208,14 +210,14 @@ class Client(ChClient):
         После копирования проверяется, кол-во строк, если не включен параметр distinct,
         который удаляет дубликаты строк.
 
-        :param from_db:
-        :param from_table:
-        :param to_db:
-        :param to_table:
-        :param where:
-        :param columns:
+        :param from_db: str
+        :param from_table: str
+        :param to_db: str
+        :param to_table: str
+        :param where: str
+        :param columns: list
         :param distinct: bool : Будет удалять дублирующиеся строки при копировании
-        :param kwargs:
+        :param kwargs: параметры принимаемые библиотекой clickhouse_driver
         :return: True, False и None при distinct=True
         """
         if not self.exists(to_db, to_table, **kwargs):
@@ -276,12 +278,13 @@ class Client(ChClient):
 
     def drop_partitions(self, db, table, partitions, **kwargs):
         """
-        :param db:
-        :param table:
+        :param db: str
+        :param table: str
         :param partitions: str or int or list(list)
              Если ключ партиции состоит из одного столбца,
              то можно передать, как str или int, а иначе, как list(list).
              Примеры:  '2018-01-01' или 123 или [...,[12345, '2018-01-01']]
+        :param kwargs: параметры принимаемые библиотекой clickhouse_driver
         :return: None
         """
 
@@ -309,7 +312,7 @@ class Client(ChClient):
 
     def _get_last_mutation_id(self, type_mutation, db, table, command, **kwargs):
         command = command.replace("'", "\\'")
-        command = command[command.upper().find(type_mutation):]
+        command = command[command.upper().find(type_mutation) :]
         query = (
             "SELECT mutation_id "
             "FROM system.mutations "
@@ -319,43 +322,65 @@ class Client(ChClient):
         r = self.execute(query, **kwargs)
         return r[0][0] if r else None
 
-    def get_mutations(self, limit=10, offset=0, columns=None, where=None, order_by="create_time DESC", **kwargs):
+    def get_mutations(
+        self,
+        limit=10,
+        offset=0,
+        columns=None,
+        where=None,
+        order_by="create_time DESC",
+        **kwargs,
+    ):
         """
-        Выводит строки таблицы.
+        Выводит строки таблицы мутаций.
 
         :param limit: int
         :param offset: int
         :param columns: list, tuple, None
         :param where: str
         :param order_by: str
+        :param kwargs: параметры принимаемые библиотекой clickhouse_driver
         :return: list
         """
-        return self.select("system", "mutations", limit, offset, columns, where, order_by, **kwargs)
+        return self.select(
+            "system", "mutations", limit, offset, columns, where, order_by, **kwargs
+        )
 
-    def get_mutations_df(self, limit=10, offset=0, columns=None, where=None, order_by="create_time DESC", **kwargs):
+    def get_mutations_df(
+        self,
+        limit=10,
+        offset=0,
+        columns=None,
+        where=None,
+        order_by="create_time DESC",
+        **kwargs,
+    ):
         """
-        Выводит строки таблицы.
+        Выводит строки таблицы мутаций в формате DataFrame.
 
         :param limit: int
         :param offset: int
         :param columns: list, tuple, None
         :param where: str
         :param order_by: str
-        :return: list
+        :param kwargs: параметры принимаемые библиотекой clickhouse_driver
+        :return: DataFrame
         """
-        return self.select_df("system", "mutations", limit, offset, columns, where, order_by, **kwargs)
+        return self.select_df(
+            "system", "mutations", limit, offset, columns, where, order_by, **kwargs
+        )
 
     def delete(
         self, db, table, where, prevent_parallel_processes=False, sleep=1, **kwargs
     ):
         """
 
-        :param db:
-        :param table:
-        :param where:
+        :param db: str
+        :param table: str
+        :param where: str
         :param prevent_parallel_processes: Запрос будет сделан, когда завершатся все мутации таблицы.
         :param sleep: Интервал проверки завершения всех мутаций таблицы.
-        :param kwargs:
+        :param kwargs: параметры принимаемые библиотекой clickhouse_driver
         :return: None
         """
         query = "ALTER TABLE {}.{} DELETE WHERE {}".format(db, table, where)
@@ -384,13 +409,13 @@ class Client(ChClient):
     ):
         """
 
-        :param db:
-        :param table:
-        :param update:
-        :param where:
+        :param db: str
+        :param table: str
+        :param update: str
+        :param where: str
         :param prevent_parallel_processes: Запрос будет сделан, когда завершатся все мутации таблицы.
         :param sleep: Интервал проверки завершения всех мутаций таблицы.
-        :param kwargs:
+        :param kwargs: параметры принимаемые библиотекой clickhouse_driver
         :return: None
         """
         query = """ALTER TABLE {db}.{t} UPDATE {update} WHERE {where}"""
@@ -500,6 +525,12 @@ class Client(ChClient):
         Перенос из одной таблицы в другую идентичную таблицу
         с принудительным приведением типов столбцов
         по типам столбцов целевой таблицы.
+
+        :param from_db: str
+        :param from_table: str
+        :param to_db: str
+        :param to_table: str
+        :param kwargs: параметры принимаемые библиотекой clickhouse_driver
         :return: None
         """
         column_data = self.describe(to_db, to_table)
@@ -520,7 +551,11 @@ class Client(ChClient):
         return self.execute(query, data, **kwargs)
 
     def insert_select(self, db, table, query, columns=None, **kwargs):
-        columns_str = "({})".format(",".join(columns)) if columns else ""
+        if columns:
+            columns_str = ",".join(columns)
+            columns_str = "({})".format(columns_str)
+        else:
+            columns_str = ""
         query = "INSERT INTO {}.{} {} {}".format(db, table, columns_str, query)
         return self.execute(query, **kwargs)
 
@@ -530,15 +565,17 @@ class Client(ChClient):
         :param query: str
         :param columns_names: list, tuple : названия столбцов для DataFrame
         :param dtype: object type : параметр передается при создании dataframe для определения типа столбцов
-        :param kwargs:
-        :return:
+        :param kwargs: параметры принимаемые библиотекой clickhouse_driver
+        :return: DataFrame
         """
         import pandas as pd  # pylint: disable=import-error
 
         result = self.execute(query, **kwargs) or [[]]
         return pd.DataFrame(data=result, columns=columns_names, dtype=dtype)
 
-    def _generate_select(self, db, table, limit=10, offset=0, columns=None, where=None, order_by=None):
+    def _generate_select(
+        self, db, table, limit=10, offset=0, columns=None, where=None, order_by=None
+    ):
         """Формирование запроса."""
         where = "WHERE {}\n".format(where) if where else ""
         order_by = "ORDER BY {}\n".format(order_by) if order_by else ""
@@ -555,7 +592,17 @@ class Client(ChClient):
         )
         return query
 
-    def select(self, db, table, limit=10, offset=0, columns=None, where=None, order_by=None, **kwargs):
+    def select(
+        self,
+        db,
+        table,
+        limit=10,
+        offset=0,
+        columns=None,
+        where=None,
+        order_by=None,
+        **kwargs,
+    ):
         """
         Выводит строки таблицы.
 
@@ -566,12 +613,26 @@ class Client(ChClient):
         :param columns: list, tuple, None
         :param where: str
         :param order_by: str
+        :param kwargs: параметры принимаемые библиотекой clickhouse_driver
         :return: list
         """
-        query = self._generate_select(db, table, limit, offset, columns, where, order_by)
+        query = self._generate_select(
+            db, table, limit, offset, columns, where, order_by
+        )
         return self.execute(query, **kwargs)
 
-    def select_df(self, db, table, limit=10, offset=0, columns=None, where=None, order_by=None, dtype=None, **kwargs):
+    def select_df(
+        self,
+        db,
+        table,
+        limit=10,
+        offset=0,
+        columns=None,
+        where=None,
+        order_by=None,
+        dtype=None,
+        **kwargs,
+    ):
         """
         Выводит строки таблицы.
 
@@ -583,9 +644,12 @@ class Client(ChClient):
         :param where: str
         :param order_by: str
         :param dtype: object type : параметр передается при создании dataframe для определения типа столбцов датафрейма
+        :param kwargs: параметры принимаемые библиотекой clickhouse_driver
         :return: DataFrame
         """
-        query = self._generate_select(db, table, limit, offset, columns, where, order_by)
+        query = self._generate_select(
+            db, table, limit, offset, columns, where, order_by
+        )
         if columns is None:
             # Если названия столбцов не переданы, возьмет их из описания таблицы.
             columns_data = self.describe(db, table, **kwargs)
@@ -636,6 +700,7 @@ class DB(ChClient):
         :param extra_before_settings: str : будет вставлено перед SETTINGS
         :param engine: str
         :param settings: str
+        :param kwargs: параметры принимаемые библиотекой clickhouse_driver
         :return: Table
         """
         return self._client.create_table_mergetree(
@@ -672,6 +737,7 @@ class DB(ChClient):
         :param temporary: bool
         :param engine: str
         :param type_log_table: : параметр более не поддерживается. Но остался для совместимости.
+        :param kwargs: параметры принимаемые библиотекой clickhouse_driver
         :return: Table
         """
         return self._client.create_table_log(
@@ -701,11 +767,16 @@ class Table(ChClient):
         :param offset: int
         :param columns: list, tuple, None
         :param where: str
+        :param kwargs: параметры принимаемые библиотекой clickhouse_driver
         :return: list
         """
-        return self._client.select(self.db, self.table, limit, offset, columns, where, **kwargs)
+        return self._client.select(
+            self.db, self.table, limit, offset, columns, where, **kwargs
+        )
 
-    def select_df(self, limit=10, offset=0, columns=None, where=None, dtype=None, **kwargs):
+    def select_df(
+        self, limit=10, offset=0, columns=None, where=None, dtype=None, **kwargs
+    ):
         """
         Выводит строки таблицы.
 
@@ -714,9 +785,12 @@ class Table(ChClient):
         :param columns: list, tuple, None
         :param where: str
         :param dtype: object type : параметр передается при создании dataframe для определения типа столбцов датафрейма
+        :param kwargs: параметры принимаемые библиотекой clickhouse_driver
         :return: DataFrame
         """
-        return self._client.select_df(self.db, self.table, limit, offset, columns, where, dtype, **kwargs)
+        return self._client.select_df(
+            self.db, self.table, limit, offset, columns, where, dtype, **kwargs
+        )
 
     def insert(self, data, columns=None, **kwargs):
         return self._client.insert(self.db, self.table, data, columns, **kwargs)
@@ -729,6 +803,9 @@ class Table(ChClient):
         Перенос из одной таблицы в другую идентичную таблицу
         с принудительным приведением типов столбцов
         по типам столбцов целевой таблицы.
+        :param from_db: str
+        :param from_table: str
+        :param kwargs: параметры принимаемые библиотекой clickhouse_driver
         :return: None
         """
         return self._client.insert_transform_from_table(
@@ -752,10 +829,10 @@ class Table(ChClient):
     def delete(self, where, prevent_parallel_processes=False, sleep=1, **kwargs):
         """
 
-        :param where:
-        :param prevent_parallel_processes: Запрос будет сделан, когда завершатся все мутации таблицы.
-        :param sleep: Интервал проверки завершения всех мутаций таблицы.
-        :param kwargs:
+        :param where: str
+        :param prevent_parallel_processes: bool : Запрос будет сделан, когда завершатся все мутации таблицы.
+        :param sleep: int : Интервал проверки завершения всех мутаций таблицы.
+        :param kwargs: параметры принимаемые библиотекой clickhouse_driver
         :return: None
         """
         return self._client.delete(
@@ -772,11 +849,11 @@ class Table(ChClient):
     ):
         """
 
-        :param update:
-        :param where:
-        :param prevent_parallel_processes: Запрос будет сделан, когда завершатся все мутации таблицы.
-        :param sleep: Интервал проверки завершения всех мутаций таблицы.
-        :param kwargs:
+        :param update: str
+        :param where: str
+        :param prevent_parallel_processes: bool : Запрос будет сделан, когда завершатся все мутации таблицы.
+        :param sleep: int : Интервал проверки завершения всех мутаций таблицы.
+        :param kwargs: параметры принимаемые библиотекой clickhouse_driver
         :return: None
         """
         return self._client.update(
@@ -797,12 +874,12 @@ class Table(ChClient):
         После копирования проверяется, кол-во строк, если не включен параметр distinct,
         который удаляет дубликаты строк.
 
-        :param from_db:
-        :param from_table:
-        :param where:
-        :param columns:
+        :param from_db: str
+        :param from_table: str
+        :param where: str
+        :param columns: list
         :param distinct: bool : Будет удалять дублирующиеся строки при копировании
-        :param kwargs:
+        :param kwargs: параметры принимаемые библиотекой clickhouse_driver
         :return: True, False и None при distinct=True
         """
         return self._client.copy_data(
@@ -828,10 +905,10 @@ class Table(ChClient):
     def copy_table(self, new_db, new_table, return_new_table=False, **kwargs):
         """
 
-        :param new_db:
-        :param new_table:
+        :param new_db: str
+        :param new_table: str
         :param return_new_table: Возвратит новый класс Table
-        :param kwargs:
+        :param kwargs: параметры принимаемые библиотекой clickhouse_driver
         :return: None, Table
         """
         Table = self._client.copy_table(
@@ -858,6 +935,7 @@ class Table(ChClient):
              Если ключ партиции состоит из одного столбца,
              то можно передать, как str или int, а иначе, как list(list).
              Примеры:  '2018-01-01' или 123 или [...,[12345, '2018-01-01']]
+        :param kwargs: параметры принимаемые библиотекой clickhouse_driver
         :return: None
         """
         self._client.drop_partitions(
