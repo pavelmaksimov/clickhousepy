@@ -793,6 +793,9 @@ class Table(ChClient):
             self.db, self.table, where, date_column_name, **kwargs
         )
 
+    def get_count_run_mutations(self, **kwargs):
+        return self._client.get_count_run_mutations(self.db, self.table, **kwargs)
+
     def copy_table(self, new_db, new_table, return_new_table=False, **kwargs):
         """
 
@@ -840,18 +843,3 @@ class Table(ChClient):
 
     def show_create_table(self, **kwargs):
         return self._client.show_create_table(self.db, self.table, **kwargs)
-
-    def select(self, limit=10, columns=None, where=None, **kwargs):
-        where = "WHERE {}".format(where) if where else ""
-        if columns and isinstance(columns, (tuple, list)):
-            columns_ = ",\n\t".join(columns)
-            columns_ = "(\n\t{}\n)\n".format(columns_)
-        elif columns is None:
-            columns_ = "*"
-        else:
-            raise TypeError("параметр columns принимается только, как list и tuple")
-
-        query = "SELECT {} FROM {{db}}.{{table}} {} LIMIT {}".format(
-            columns_, where, limit
-        )
-        return self.get_df(query, columns, **kwargs)
