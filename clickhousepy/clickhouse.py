@@ -268,6 +268,33 @@ class Client(ChClient):
             )
             return None
 
+    def deduplicate_data(self, db, table, where, **kwargs):
+        """
+        Удаляет дублирующиеся строки, путем копирования таблицы и данных и обратной вставки, через distinct.
+
+        :param db: str
+        :param table: str
+        :param where: str
+        :param kwargs: параметры принимаемые библиотекой clickhouse_driver
+        :return: True, False
+        """
+        copy_table_name = table + "copy_table_for_deduplicate"
+        self.copy_table(db, table, db, copy_table_name, **kwargs)
+        count_rows_before = self.get_count_rows(db, table, where, **kwargs)
+        is_identic_data = self.copy_data(db, table, db, copy_table_name, where=where, **kwargs)
+        if is_identic_data:
+            self.delete(db, table, where=where, prevent_parallel_processes=True, **kwargs)
+            self.copy_data(db, copy_table_name, db, table, distinct=True, **kwargs)
+            self.drop_table(db, copy_table_name, **kwargs)
+            count_rows_after = self.get_count_rows(db, table, where, **kwargs)
+            diff = count_rows_before - count_rows_after
+            logging.info("Удалено дублирующихся строк: {}".format(diff))
+            return True
+        else:
+            logging.error("Данные при копировании таблицы не идентичны, запустите снова.")
+            self.drop_table(db, copy_table_name, **kwargs)
+            return False
+
     def drop_db(self, db, if_exists=True, **kwargs):
         exists = "IF EXISTS" if if_exists else ""
         return self.execute("DROP DATABASE {} {}".format(exists, db), **kwargs)
@@ -950,3 +977,14 @@ class Table(ChClient):
 
     def show_create_table(self, **kwargs):
         return self._client.show_create_table(self.db, self.table, **kwargs)
+
+    def deduplicate_data(self, where, **kwargs):
+        """
+        Удаляет дублирующиеся строки, путем копирования таблицы и данных и обратной вставки, через distinct.
+
+        :param where: str
+        :param kwargs: параметры принимаемые библиотекой clickhouse_driver
+        :return: True, False
+        """
+        return self._client.deduplicate_data(self.db, self.table, where, **kwargs)
+

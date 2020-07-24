@@ -50,6 +50,13 @@ def test_decorator_function(db, table):
 
 
 @_decorator_function
+def test_deduplicate_data(db, table):
+    print(table.select())
+    table.deduplicate_data(where="toDate(dt) = '2000-01-03' ")
+    print(table.select())
+
+
+@_decorator_function
 def test_get_methods(db, table):
     print(table.get_count_rows())
     print(table.get_min_date(date_column_name="dt"))
