@@ -105,6 +105,8 @@ table = db.create_table_mergetree(
     orders=["d"],
     partition=["s", "d"],
 )
+# Актуализировать уже созданную таблицу
+# table = client.Table(TEST_DB, TEST_TABLE)
 
 r = table.show_create_table()
 print("описание создания таблицы", r)
