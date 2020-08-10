@@ -24,7 +24,7 @@ TEST_TABLE = "__chpytest12345"
 client.create_db(TEST_DB)
 client.create_table_mergetree(
     TEST_DB, TEST_TABLE,
-    columns=["i UInt32"],
+    columns=[("i", "UInt32")], # или так ["i UInt32"]
     orders=["i"],
 )
 client.insert(
@@ -55,7 +55,7 @@ client.create_db(TEST_DB)
 # Создание таблицы.
 client.create_table_mergetree(
     TEST_DB, TEST_TABLE,
-    columns=["s String"],
+    columns=[("s", "String")],
     orders=["s"],
 )
 # Вставка данных.
@@ -83,14 +83,6 @@ db = client.DB(TEST_DB)
 r = db.show_tables()
 print("список таблиц базы данных {}:".format(TEST_DB), r)
 
-table = client.Table(TEST_DB, TEST_TABLE)
-r = table.get_count_rows()
-print("кол-во строк:", r)
-
-# Очистка таблицы.
-table.truncate()
-# Удаление таблицы.
-table.drop_table()
 # Удаление базы данных.
 db.drop_db()
 ```
@@ -101,7 +93,7 @@ db = client.create_db(TEST_DB)
 
 table = db.create_table_mergetree(
     TEST_TABLE,
-    columns=["s String", "t String", "d Date"],
+    columns=[("s", "String"), ("t", "String"), ("d", "Date")],
     orders=["d"],
     partition=["s", "d"],
 )
@@ -181,7 +173,7 @@ client.drop_db(TEST_DB)
 db = client.create_db(TEST_DB)
 table = db.create_table_mergetree(
     TEST_TABLE,
-    columns=["string String", "integer UInt32", "dt DateTime"],
+    columns=[("string", "String"), ("integer", "UInt32"), ("dt", "DateTime")],
     orders=["string"],
     partition=["string"],
 )
@@ -211,7 +203,7 @@ client.drop_db(TEST_DB)
 db = client.create_db(TEST_DB)
 table = db.create_table_mergetree(
     TEST_TABLE,
-    columns=["string String", "integer UInt32", "dt DateTime"],
+    columns=[("string", "String"), ("integer", "UInt32"), ("dt", "DateTime")],
     orders=["string"],
     partition=["string"],
 )

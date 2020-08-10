@@ -260,7 +260,7 @@ def test_readme():
     # Создание таблицы.
     client.create_table_mergetree(
         TEST_DB, TEST_TABLE,
-        columns=["s String"],
+        columns=[("s", "String")],
         orders=["s"],
     )
     # Вставка данных.
@@ -302,7 +302,7 @@ def test_readme():
 
     table = db.create_table_mergetree(
         TEST_TABLE,
-        columns=["s String", "t String", "d Date"],
+        columns=[("s", "String"), ("t", "String"), ("d", "Date")],
         orders=["d"],
         partition=["s", "d"],
     )
