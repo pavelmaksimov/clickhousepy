@@ -50,6 +50,37 @@ def test_decorator_function(db, table):
 
 
 @_decorator_function
+def test_add_column(db, table):
+    table.add_column("new_col", "UInt32", after="integer")
+    print(table.describe())
+
+
+@_decorator_function
+def test_drop_column(db, table):
+    table.drop_column("dt")
+    print(table.describe())
+
+
+@_decorator_function
+def test_clear_column(db, table):
+    table.clear_column("integer", partition="tuple('c')")
+    print(table.select_df())
+
+
+@_decorator_function
+def test_comment_column(db, table):
+    table.comment_column("string", "строковый столбец")
+    print(table.describe())
+
+
+@_decorator_function
+def test_modify_column(db, table):
+    print(table.describe())
+    table.modify_column("integer", "UInt8")
+    print(table.describe())
+
+
+@_decorator_function
 def test_deduplicate_data(db, table):
     print(table.select())
     table.deduplicate_data(where="toDate(dt) = '2000-01-03' ")

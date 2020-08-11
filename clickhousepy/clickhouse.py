@@ -683,6 +683,73 @@ class Client(ChClient):
             columns = [i[0] for i in columns_data]
         return self.get_df(query, columns_names=columns, dtype=dtype, **kwargs)
 
+    def _alter_table_column(self, db, table, method, name, type=None, after=None, expr=None, codec=None, ttl=None, if_not_exists_or_if_exists=True, on_cluster=False, extra=None, **kwargs):
+        """
+
+        :param db: str
+        :param table: str
+        :param method: str : ADD|DROP|CLEAR|COMMENT|MODIFY
+        :param name: str
+        :param type: str, None
+        :param after: str
+        :param expr: str : DEFAULT|MATERIALIZED|ALIAS expr
+        :param codec: str
+        :param if_not_exists_or_if_exists: bool
+        :param on_cluster: bool
+        :param extra: str, None
+        :param kwargs: параметры принимаемые библиотекой clickhouse_driver
+        :return:
+        """
+        # TODO: проверка type
+        type = type if type else ""
+        after = "AFTER {}".format(after) if after else ""
+        ttl = "TTL {}".format(ttl) if ttl else ""
+        expr = expr.upper() if expr else ""
+        codec = codec if codec else ""
+        cluster = "ON CLUSTER {}".format(on_cluster) if on_cluster else ""
+        extra = extra if extra else ""
+        method = method.upper()
+        if method == "ADD":
+            exists = "IF NOT EXISTS" if if_not_exists_or_if_exists else ""
+        else:
+            exists = "IF EXISTS" if if_not_exists_or_if_exists else ""
+        query = (
+            "ALTER TABLE {db}.{table} {cluster} {method} COLUMN "
+            "{exists} {name} {type} {default} {codec} {ttl} {after} {extra}"
+        )
+        query = query.format(
+            db=db,
+            table=table,
+            cluster=cluster,
+            method=method,
+            exists=exists,
+            name=name,
+            type=type,
+            default=expr,
+            codec=codec,
+            ttl=ttl,
+            after=after,
+            extra=extra
+        )
+        return self.execute(query, **kwargs)
+
+    def add_column(self, db, table, name, type, after=None, expr=None, codec=None, ttl=None, if_not_exists=True, on_cluster=False, **kwargs):
+        return self._alter_table_column(db, table, "ADD", name, type, after, expr, codec, ttl, if_not_exists, on_cluster, **kwargs)
+
+    def drop_column(self, db, table, name, if_exists=True, on_cluster=False, **kwargs):
+        return self._alter_table_column(db, table, "DROP", name, if_not_exists_or_if_exists=if_exists, on_cluster=on_cluster, **kwargs)
+
+    def clear_column(self, db, table, name, partition, if_exists=True, on_cluster=False, **kwargs):
+        partition_ = "IN PARTITION {}".format(partition)
+        return self._alter_table_column(db, table, "CLEAR", name, if_not_exists_or_if_exists=if_exists, on_cluster=on_cluster, extra=partition_, **kwargs)
+
+    def comment_column(self, db, table, name, comment, if_exists=True, on_cluster=False, **kwargs):
+        comment = "'{}'".format(comment)
+        return self._alter_table_column(db, table, "COMMENT", name, if_not_exists_or_if_exists=if_exists, on_cluster=on_cluster, extra=comment, **kwargs)
+
+    def modify_column(self, db, table, name, type, expr=None, ttl=None, if_exists=True, on_cluster=False, **kwargs):
+        return self._alter_table_column(db, table, "MODIFY", name, type, expr=expr, ttl=ttl, if_not_exists_or_if_exists=if_exists, on_cluster=on_cluster, **kwargs)
+
 
 class DB(ChClient):
     def __init__(self, client, db, *args, **kwargs):
@@ -988,3 +1055,17 @@ class Table(ChClient):
         """
         return self._client.deduplicate_data(self.db, self.table, where, **kwargs)
 
+    def add_column(self, name, type, after=None, expr=None, codec=None, ttl=None, if_not_exists=True, on_cluster=False, **kwargs):
+        return self._client.add_column(self.db, self.table, name, type, after=after, expr=expr, codec=codec, ttl=ttl, if_not_exists=if_not_exists, on_cluster=on_cluster, **kwargs)
+
+    def drop_column(self, name, if_exists=True, on_cluster=False, **kwargs):
+        return self._client.drop_column(self.db, self.table, name, if_exists=if_exists, on_cluster=on_cluster, **kwargs)
+
+    def clear_column(self, name, partition=None, if_exists=True, on_cluster=False, **kwargs):
+        return self._client.clear_column(self.db, self.table, name, partition=partition, if_exists=if_exists, on_cluster=on_cluster, **kwargs)
+
+    def comment_column(self, name, comment, if_exists=True, on_cluster=False, **kwargs):
+        return self._client.comment_column(self.db, self.table, name, comment=comment, if_exists=if_exists, on_cluster=on_cluster, **kwargs)
+
+    def modify_column(self, name, type, expr=None, if_exists=True, on_cluster=False, ttl=None, **kwargs):
+        return self._client.modify_column(self.db, self.table, name, type, expr=expr, ttl=ttl, if_exists=if_exists, on_cluster=on_cluster, **kwargs)
