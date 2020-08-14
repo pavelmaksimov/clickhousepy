@@ -725,7 +725,7 @@ class Client(ChClient):
         type = type if type else ""
         after = "AFTER {}".format(after) if after else ""
         ttl = "TTL {}".format(ttl) if ttl else ""
-        expr = expr.upper() if expr else ""
+        expr = expr if expr else ""
         codec = codec if codec else ""
         cluster = "ON CLUSTER {}".format(on_cluster) if on_cluster else ""
         extra = extra if extra else ""
