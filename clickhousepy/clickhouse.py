@@ -281,9 +281,13 @@ class Client(ChClient):
         copy_table_name = table + "copy_table_for_deduplicate"
         self.copy_table(db, table, db, copy_table_name, **kwargs)
         count_rows_before = self.get_count_rows(db, table, where, **kwargs)
-        is_identic_data = self.copy_data(db, table, db, copy_table_name, where=where, **kwargs)
+        is_identic_data = self.copy_data(
+            db, table, db, copy_table_name, where=where, **kwargs
+        )
         if is_identic_data:
-            self.delete(db, table, where=where, prevent_parallel_processes=True, **kwargs)
+            self.delete(
+                db, table, where=where, prevent_parallel_processes=True, **kwargs
+            )
             self.copy_data(db, copy_table_name, db, table, distinct=True, **kwargs)
             self.drop_table(db, copy_table_name, **kwargs)
             count_rows_after = self.get_count_rows(db, table, where, **kwargs)
@@ -291,7 +295,9 @@ class Client(ChClient):
             logging.info("Удалено дублирующихся строк: {}".format(diff))
             return True
         else:
-            logging.error("Данные при копировании таблицы не идентичны, запустите снова.")
+            logging.error(
+                "Данные при копировании таблицы не идентичны, запустите снова."
+            )
             self.drop_table(db, copy_table_name, **kwargs)
             return False
 
@@ -683,7 +689,22 @@ class Client(ChClient):
             columns = [i[0] for i in columns_data]
         return self.get_df(query, columns_names=columns, dtype=dtype, **kwargs)
 
-    def _alter_table_column(self, db, table, method, name, type=None, after=None, expr=None, codec=None, ttl=None, if_not_exists_or_if_exists=True, on_cluster=False, extra=None, **kwargs):
+    def _alter_table_column(
+        self,
+        db,
+        table,
+        method,
+        name,
+        type=None,
+        after=None,
+        expr=None,
+        codec=None,
+        ttl=None,
+        if_not_exists_or_if_exists=True,
+        on_cluster=False,
+        extra=None,
+        **kwargs,
+    ):
         """
 
         :param db: str
@@ -729,26 +750,104 @@ class Client(ChClient):
             codec=codec,
             ttl=ttl,
             after=after,
-            extra=extra
+            extra=extra,
         )
         return self.execute(query, **kwargs)
 
-    def add_column(self, db, table, name, type, after=None, expr=None, codec=None, ttl=None, if_not_exists=True, on_cluster=False, **kwargs):
-        return self._alter_table_column(db, table, "ADD", name, type, after, expr, codec, ttl, if_not_exists, on_cluster, **kwargs)
+    def add_column(
+        self,
+        db,
+        table,
+        name,
+        type,
+        after=None,
+        expr=None,
+        codec=None,
+        ttl=None,
+        if_not_exists=True,
+        on_cluster=False,
+        **kwargs,
+    ):
+        return self._alter_table_column(
+            db,
+            table,
+            "ADD",
+            name,
+            type,
+            after,
+            expr,
+            codec,
+            ttl,
+            if_not_exists,
+            on_cluster,
+            **kwargs,
+        )
 
     def drop_column(self, db, table, name, if_exists=True, on_cluster=False, **kwargs):
-        return self._alter_table_column(db, table, "DROP", name, if_not_exists_or_if_exists=if_exists, on_cluster=on_cluster, **kwargs)
+        return self._alter_table_column(
+            db,
+            table,
+            "DROP",
+            name,
+            if_not_exists_or_if_exists=if_exists,
+            on_cluster=on_cluster,
+            **kwargs,
+        )
 
-    def clear_column(self, db, table, name, partition, if_exists=True, on_cluster=False, **kwargs):
+    def clear_column(
+        self, db, table, name, partition, if_exists=True, on_cluster=False, **kwargs
+    ):
         partition_ = "IN PARTITION {}".format(partition)
-        return self._alter_table_column(db, table, "CLEAR", name, if_not_exists_or_if_exists=if_exists, on_cluster=on_cluster, extra=partition_, **kwargs)
+        return self._alter_table_column(
+            db,
+            table,
+            "CLEAR",
+            name,
+            if_not_exists_or_if_exists=if_exists,
+            on_cluster=on_cluster,
+            extra=partition_,
+            **kwargs,
+        )
 
-    def comment_column(self, db, table, name, comment, if_exists=True, on_cluster=False, **kwargs):
+    def comment_column(
+        self, db, table, name, comment, if_exists=True, on_cluster=False, **kwargs
+    ):
         comment = "'{}'".format(comment)
-        return self._alter_table_column(db, table, "COMMENT", name, if_not_exists_or_if_exists=if_exists, on_cluster=on_cluster, extra=comment, **kwargs)
+        return self._alter_table_column(
+            db,
+            table,
+            "COMMENT",
+            name,
+            if_not_exists_or_if_exists=if_exists,
+            on_cluster=on_cluster,
+            extra=comment,
+            **kwargs,
+        )
 
-    def modify_column(self, db, table, name, type, expr=None, ttl=None, if_exists=True, on_cluster=False, **kwargs):
-        return self._alter_table_column(db, table, "MODIFY", name, type, expr=expr, ttl=ttl, if_not_exists_or_if_exists=if_exists, on_cluster=on_cluster, **kwargs)
+    def modify_column(
+        self,
+        db,
+        table,
+        name,
+        type,
+        expr=None,
+        ttl=None,
+        if_exists=True,
+        on_cluster=False,
+        **kwargs,
+    ):
+        return self._alter_table_column(
+            db,
+            table,
+            "MODIFY",
+            name,
+            type,
+            expr=expr,
+            ttl=ttl,
+            if_not_exists_or_if_exists=if_exists,
+            on_cluster=on_cluster,
+            **kwargs,
+        )
 
 
 class DB(ChClient):
@@ -1055,17 +1154,84 @@ class Table(ChClient):
         """
         return self._client.deduplicate_data(self.db, self.table, where, **kwargs)
 
-    def add_column(self, name, type, after=None, expr=None, codec=None, ttl=None, if_not_exists=True, on_cluster=False, **kwargs):
-        return self._client.add_column(self.db, self.table, name, type, after=after, expr=expr, codec=codec, ttl=ttl, if_not_exists=if_not_exists, on_cluster=on_cluster, **kwargs)
+    def add_column(
+        self,
+        name,
+        type,
+        after=None,
+        expr=None,
+        codec=None,
+        ttl=None,
+        if_not_exists=True,
+        on_cluster=False,
+        **kwargs,
+    ):
+        return self._client.add_column(
+            self.db,
+            self.table,
+            name,
+            type,
+            after=after,
+            expr=expr,
+            codec=codec,
+            ttl=ttl,
+            if_not_exists=if_not_exists,
+            on_cluster=on_cluster,
+            **kwargs,
+        )
 
     def drop_column(self, name, if_exists=True, on_cluster=False, **kwargs):
-        return self._client.drop_column(self.db, self.table, name, if_exists=if_exists, on_cluster=on_cluster, **kwargs)
+        return self._client.drop_column(
+            self.db,
+            self.table,
+            name,
+            if_exists=if_exists,
+            on_cluster=on_cluster,
+            **kwargs,
+        )
 
-    def clear_column(self, name, partition=None, if_exists=True, on_cluster=False, **kwargs):
-        return self._client.clear_column(self.db, self.table, name, partition=partition, if_exists=if_exists, on_cluster=on_cluster, **kwargs)
+    def clear_column(
+        self, name, partition=None, if_exists=True, on_cluster=False, **kwargs
+    ):
+        return self._client.clear_column(
+            self.db,
+            self.table,
+            name,
+            partition=partition,
+            if_exists=if_exists,
+            on_cluster=on_cluster,
+            **kwargs,
+        )
 
     def comment_column(self, name, comment, if_exists=True, on_cluster=False, **kwargs):
-        return self._client.comment_column(self.db, self.table, name, comment=comment, if_exists=if_exists, on_cluster=on_cluster, **kwargs)
+        return self._client.comment_column(
+            self.db,
+            self.table,
+            name,
+            comment=comment,
+            if_exists=if_exists,
+            on_cluster=on_cluster,
+            **kwargs,
+        )
 
-    def modify_column(self, name, type, expr=None, if_exists=True, on_cluster=False, ttl=None, **kwargs):
-        return self._client.modify_column(self.db, self.table, name, type, expr=expr, ttl=ttl, if_exists=if_exists, on_cluster=on_cluster, **kwargs)
+    def modify_column(
+        self,
+        name,
+        type,
+        expr=None,
+        if_exists=True,
+        on_cluster=False,
+        ttl=None,
+        **kwargs,
+    ):
+        return self._client.modify_column(
+            self.db,
+            self.table,
+            name,
+            type,
+            expr=expr,
+            ttl=ttl,
+            if_exists=if_exists,
+            on_cluster=on_cluster,
+            **kwargs,
+        )
