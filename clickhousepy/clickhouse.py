@@ -40,7 +40,7 @@ class Client(ChClient):
     def rename(self, db, table, new_db, new_table, **kwargs):
         self.execute(
             """RENAME TABLE {}.{} TO {}.{}""".format(db, table, new_db, new_table),
-            **kwargs,
+            **kwargs
         )
         return self.Table(new_db, new_table)
 
@@ -63,7 +63,7 @@ class Client(ChClient):
         extra_before_settings="",
         engine="MergeTree",
         settings=None,
-        **kwargs,
+        **kwargs
     ):
         """
 
@@ -148,7 +148,7 @@ class Client(ChClient):
         temporary=False,
         engine="StripeLog",
         type_log_table=None,
-        **kwargs,
+        **kwargs
     ):
         """
 
@@ -203,7 +203,7 @@ class Client(ChClient):
         where=None,
         columns=None,
         distinct=False,
-        **kwargs,
+        **kwargs
     ):
         """
         Копирование данных. Целевая таблица создается автоматически, если отсутствует.
@@ -243,7 +243,7 @@ class Client(ChClient):
             "INSERT INTO {}.{} {} SELECT {} FROM {}.{} {}".format(
                 to_db, to_table, columns, from_columns, from_db, from_table, where_
             ),
-            **kwargs,
+            **kwargs
         )
         count_rows1 = self.get_count_rows(from_db, from_table, where=where)
         count_rows2 = self.get_count_rows(to_db, to_table, where=where)
@@ -362,7 +362,7 @@ class Client(ChClient):
         columns=None,
         where=None,
         order_by="create_time DESC",
-        **kwargs,
+        **kwargs
     ):
         """
         Выводит строки таблицы мутаций.
@@ -386,7 +386,7 @@ class Client(ChClient):
         columns=None,
         where=None,
         order_by="create_time DESC",
-        **kwargs,
+        **kwargs
     ):
         """
         Выводит строки таблицы мутаций в формате DataFrame.
@@ -438,7 +438,7 @@ class Client(ChClient):
         where,
         prevent_parallel_processes=False,
         sleep=1,
-        **kwargs,
+        **kwargs
     ):
         """
 
@@ -634,7 +634,7 @@ class Client(ChClient):
         columns=None,
         where=None,
         order_by=None,
-        **kwargs,
+        **kwargs
     ):
         """
         Выводит строки таблицы.
@@ -664,7 +664,7 @@ class Client(ChClient):
         where=None,
         order_by=None,
         dtype=None,
-        **kwargs,
+        **kwargs
     ):
         """
         Выводит строки таблицы.
@@ -703,7 +703,7 @@ class Client(ChClient):
         if_not_exists_or_if_exists=True,
         on_cluster=False,
         extra=None,
-        **kwargs,
+        **kwargs
     ):
         """
 
@@ -766,7 +766,7 @@ class Client(ChClient):
         ttl=None,
         if_not_exists=True,
         on_cluster=False,
-        **kwargs,
+        **kwargs
     ):
         return self._alter_table_column(
             db,
@@ -780,7 +780,7 @@ class Client(ChClient):
             ttl,
             if_not_exists,
             on_cluster,
-            **kwargs,
+            **kwargs
         )
 
     def drop_column(self, db, table, name, if_exists=True, on_cluster=False, **kwargs):
@@ -791,7 +791,7 @@ class Client(ChClient):
             name,
             if_not_exists_or_if_exists=if_exists,
             on_cluster=on_cluster,
-            **kwargs,
+            **kwargs
         )
 
     def clear_column(
@@ -806,7 +806,7 @@ class Client(ChClient):
             if_not_exists_or_if_exists=if_exists,
             on_cluster=on_cluster,
             extra=partition_,
-            **kwargs,
+            **kwargs
         )
 
     def comment_column(
@@ -821,7 +821,7 @@ class Client(ChClient):
             if_not_exists_or_if_exists=if_exists,
             on_cluster=on_cluster,
             extra=comment,
-            **kwargs,
+            **kwargs
         )
 
     def modify_column(
@@ -834,7 +834,7 @@ class Client(ChClient):
         ttl=None,
         if_exists=True,
         on_cluster=False,
-        **kwargs,
+        **kwargs
     ):
         return self._alter_table_column(
             db,
@@ -846,7 +846,7 @@ class Client(ChClient):
             ttl=ttl,
             if_not_exists_or_if_exists=if_exists,
             on_cluster=on_cluster,
-            **kwargs,
+            **kwargs
         )
 
 
@@ -878,7 +878,7 @@ class DB(ChClient):
         extra_before_settings="",
         engine="MergeTree",
         settings=None,
-        **kwargs,
+        **kwargs
     ):
         """
 
@@ -909,7 +909,7 @@ class DB(ChClient):
             extra_before_settings=extra_before_settings,
             engine=engine,
             settings=settings,
-            **kwargs,
+            **kwargs
         )
 
     def create_table_log(
@@ -920,7 +920,7 @@ class DB(ChClient):
         temporary=False,
         engine="StripeLog",
         type_log_table=None,
-        **kwargs,
+        **kwargs
     ):
         """
 
@@ -941,7 +941,7 @@ class DB(ChClient):
             temporary=temporary,
             engine=engine,
             type_log_table=type_log_table,
-            **kwargs,
+            **kwargs
         )
 
 
@@ -1034,7 +1034,7 @@ class Table(ChClient):
             where=where,
             prevent_parallel_processes=prevent_parallel_processes,
             sleep=sleep,
-            **kwargs,
+            **kwargs
         )
 
     def update(
@@ -1056,7 +1056,7 @@ class Table(ChClient):
             where=where,
             prevent_parallel_processes=prevent_parallel_processes,
             sleep=sleep,
-            **kwargs,
+            **kwargs
         )
 
     def copy_data_from(
@@ -1164,7 +1164,7 @@ class Table(ChClient):
         ttl=None,
         if_not_exists=True,
         on_cluster=False,
-        **kwargs,
+        **kwargs
     ):
         return self._client.add_column(
             self.db,
@@ -1177,7 +1177,7 @@ class Table(ChClient):
             ttl=ttl,
             if_not_exists=if_not_exists,
             on_cluster=on_cluster,
-            **kwargs,
+            **kwargs
         )
 
     def drop_column(self, name, if_exists=True, on_cluster=False, **kwargs):
@@ -1187,7 +1187,7 @@ class Table(ChClient):
             name,
             if_exists=if_exists,
             on_cluster=on_cluster,
-            **kwargs,
+            **kwargs
         )
 
     def clear_column(
@@ -1200,7 +1200,7 @@ class Table(ChClient):
             partition=partition,
             if_exists=if_exists,
             on_cluster=on_cluster,
-            **kwargs,
+            **kwargs
         )
 
     def comment_column(self, name, comment, if_exists=True, on_cluster=False, **kwargs):
@@ -1211,7 +1211,7 @@ class Table(ChClient):
             comment=comment,
             if_exists=if_exists,
             on_cluster=on_cluster,
-            **kwargs,
+            **kwargs
         )
 
     def modify_column(
@@ -1222,7 +1222,7 @@ class Table(ChClient):
         if_exists=True,
         on_cluster=False,
         ttl=None,
-        **kwargs,
+        **kwargs
     ):
         return self._client.modify_column(
             self.db,
@@ -1233,5 +1233,5 @@ class Table(ChClient):
             ttl=ttl,
             if_exists=if_exists,
             on_cluster=on_cluster,
-            **kwargs,
+            **kwargs
         )
