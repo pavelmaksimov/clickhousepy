@@ -9,15 +9,15 @@ logging.basicConfig(level=logging.INFO)
 
 class Client(ChClient):
     def __init__(self, *args, **kwargs):
-        self.args = args
-        self.kwargs = kwargs
+        self._args = args
+        self._kwargs = kwargs
         super().__init__(*args, **kwargs)
 
     def DB(self, db):
-        return DB(self, db, *self.args, **self.kwargs)
+        return DB(self, db, *self._args, **self._kwargs)
 
     def Table(self, db, table):
-        return Table(self, db, table, *self.args, **self.kwargs)
+        return Table(self, db, table, *self._args, **self._kwargs)
 
     def test_connection(self, **kwargs):
         r = bool(self.execute("SELECT 1", **kwargs)[0][0])
@@ -47,7 +47,7 @@ class Client(ChClient):
     def create_db(self, db, if_not_exists=True, **kwargs):
         exists = "IF NOT EXISTS" if if_not_exists else ""
         self.execute("CREATE DATABASE {} {}".format(exists, db), **kwargs)
-        return DB(self, db, *self.args, **self.kwargs)
+        return DB(self, db, *self._args, **self._kwargs)
 
     def create_table_mergetree(
         self,
