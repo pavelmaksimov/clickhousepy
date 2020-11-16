@@ -539,10 +539,10 @@ class Client(ChClient):
 
     @staticmethod
     def _transform_data_type_sql(name, data_type):
-        if data_type.find("Array") > -1:
+        if "Array" in data_type:
             return name
-        elif data_type.find("Int") > -1 or data_type.find("Float") > -1:
-            if data_type.find("Nullable") > -1:
+        elif "Int" in data_type or "Float" in data_type:
+            if "Nullable" in data_type:
                 return "to{}OrNull(toString({}))".format(data_type, name)
             else:
                 return "to{}OrZero(ifNull(toString({}), ''))".format(data_type, name)
