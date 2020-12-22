@@ -592,6 +592,33 @@ class Client(ChClient):
         query = "INSERT INTO {}.{} {} {}".format(db, table, columns_str, query)
         return self.execute(query, **kwargs)
 
+    def insert_via_stage_table(
+        self,
+        db,
+        table,
+        data,
+        columns=None,
+        stage_db="default",
+        stage_table=None,
+        **kwargs
+    ):
+        rows = len(data)
+        if stage_table is None:
+            stage_table = "{}_".format(table)
+        self.drop_table(stage_db, stage_table, **kwargs)
+        try:
+            self.copy_table(db, table, stage_db, stage_table, **kwargs)
+            self.insert(stage_db, stage_table, data, columns, **kwargs)
+            assert rows == self.get_count_rows(stage_db, stage_table, **kwargs)
+
+            is_identic = self.copy_data(
+                stage_db, stage_table, db, table, columns=columns, **kwargs
+            )
+            if not is_identic:
+                raise AssertionError("The number of lines is not identical")
+        finally:
+            self.drop_table(stage_db, stage_table, **kwargs)
+
     def get_df(self, query, columns_names=None, dtype=None, **kwargs):
         """
 
@@ -1003,6 +1030,19 @@ class Table(ChClient):
         """
         return self._client.insert_transform_from_table(
             from_db, from_table, self.db, self.table, **kwargs
+        )
+
+    def insert_via_stage_table(
+        self, data, columns=None, stage_db="default", stage_table=None, **kwargs
+    ):
+        return self._client.insert_via_stage_table(
+            self.db,
+            self.table,
+            data,
+            columns=columns,
+            stage_db=stage_db,
+            stage_table=stage_table,
+            **kwargs
         )
 
     def exists(self, **kwargs):
