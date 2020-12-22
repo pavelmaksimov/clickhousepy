@@ -686,7 +686,7 @@ class Client(ChClient):
         if columns is None:
             # Если названия столбцов не переданы, возьмет их из описания таблицы.
             columns_data = self.describe(db, table, **kwargs)
-            columns = [i[0] for i in columns_data]
+            columns = [i[0] for i in columns_data if not i[2]]
         return self.get_df(query, columns_names=columns, dtype=dtype, **kwargs)
 
     def _alter_table_column(
