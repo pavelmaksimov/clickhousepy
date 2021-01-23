@@ -22,10 +22,6 @@ class Client(ChClient):
 
     def test_connection(self, **kwargs):
         r = bool(self.execute("SELECT 1", **kwargs)[0][0])
-        if r:
-            logging.info("База данных доступна")
-        else:
-            logging.error("База данных НЕ доступна")
         return r
 
     def truncate(self, db, table, **kwargs):
