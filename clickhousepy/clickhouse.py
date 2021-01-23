@@ -46,6 +46,25 @@ class Client(ChClient):
         self.execute("CREATE DATABASE {} {}".format(exists, db), **kwargs)
         return DB(self, db, *self._args, **self._kwargs)
 
+    def _normalize_columns(self, columns):
+        if not columns:
+            raise Exception("Missing value in columns")
+
+        columns_list = []
+        for col in columns:
+            try:
+                if isinstance(col, (list, tuple)):
+                    assert len(col) >= 2
+                    columns_list.append(" ".join(col))
+                else:
+                    assert len(col.split(" ")) >= 2
+                    columns_list.append(col)
+
+            except AssertionError:
+                raise AssertionError("Not valid column schema for '{}'".format(col))
+
+        return ",\n\t".join(columns_list)
+
     def create_table_mergetree(
         self,
         db,
@@ -97,22 +116,7 @@ class Client(ChClient):
         else:
             sample = ""
 
-        if not columns:
-            raise AttributeError("Missing value in columns")
-
-        columns_str = ""
-        for col in columns:
-            try:
-                if isinstance(col, (list, tuple)):
-                    assert len(col) >= 2
-                    columns_str += " ".join(col)
-                else:
-                    assert len(col.split(" ")) >= 2
-                    columns_str += col
-            except AssertionError:
-                raise AssertionError("Not valid column schema for '{}'".format(col))
-
-        columns = ",\n\t".join(columns)
+        columns = self._normalize_columns(columns)
         orders = ", ".join(orders)
         settings = "SETTINGS {}\n".format(settings) if settings is not None else ""
         ttl = "TTL {}\n".format(ttl) if ttl is not None else ""
@@ -170,13 +174,7 @@ class Client(ChClient):
         :param kwargs: Parameters accepted by the clickhouse_driver library
         :return: Table
         """
-        if not columns:
-            raise AttributeError("Missing values in columns")
-
-        if isinstance(columns[0], (list, tuple)):
-            columns = [" ".join(i) for i in columns]
-
-        columns = ",\n\t".join(columns)
+        columns = self._normalize_columns(columns)
         exists = "IF NOT EXISTS" if if_not_exists else ""
         temporary = "TEMPORARY" if temporary else ""
 
