@@ -19,8 +19,8 @@ TEST_TABLE = "__chpytest12345"
 
 
 def _decorator_function(func):
-    # Перед запуском функции создает базу и таблицу с данными,
-    # а при выходе из функции удаляет.
+    # Before starting the function, it creates a database and a table with data,
+    # and deletes it when exiting the function.
     def wrapper():
         client.drop_db(TEST_DB)
         db = client.create_db(TEST_DB)
@@ -64,12 +64,12 @@ def test_drop_column(db, table):
 @_decorator_function
 def test_clear_column(db, table):
     table.clear_column("integer", partition="tuple('c')")
-    print(table.select_df())
+    print(table.select())
 
 
 @_decorator_function
 def test_comment_column(db, table):
-    table.comment_column("string", "строковый столбец")
+    table.comment_column("string", "string column")
     print(table.describe())
 
 
@@ -105,12 +105,12 @@ def test_copy_data(db, table):
         where="string != 'c' ",
         columns=["string"]
     )
-    # Проверка идентичности копии данных.
+    # Checking the identity of the data copy.
     print(
         table2.select(columns=["string"])
     )
     assert is_identic
-    # Проверка удаления дублирующихся строк при копировании.
+    # Checking the removal of duplicate lines when copying.
     table2.truncate()
     table2.copy_data_from(
         TEST_DB, TEST_TABLE,
@@ -169,12 +169,7 @@ def test_show():
 
 
 def test_get_mutations():
-    r = client.get_mutations(limit=1, columnar=True)
-    pprint(r)
-
-
-def test_get_mutations_df():
-    r = client.get_mutations_df(columns=["database", "table", "is_done"])
+    r = client.get_mutations(limit=3, columns=["database", "table", "is_done"])
     pprint(r)
 
 
@@ -219,7 +214,7 @@ def test_insert_select(db, table):
         columns=["string"]
     )
     print(
-        table.select_df()
+        table.select()
     )
     assert table.get_count_rows() == 16
 
@@ -243,12 +238,12 @@ def test_get_df(db, table):
         r = client.get_df(query)
         print(r)
 
-        r = table.select_df()
+        r = table.select()
         print(r)
 
-        r = table.select_df(limit=1)
-        r = table.select_df(limit=1, offset=1)
-        r = table.select_df(limit=1, offset=1, columns=["string"])
+        r = table.select(limit=1)
+        r = table.select(limit=1, offset=1)
+        r = table.select(limit=1, offset=1, columns=["string"])
         print(r)
 
 
@@ -270,8 +265,11 @@ def test_readme_df():
         [{"i": 1}, {"i": 2}],
     )
     query = "SELECT i FROM {}.{}".format(TEST_DB, TEST_TABLE)
-    r = client.get_df(query, columns_names=["Col Integer"])
-    print("данные в формате dataframe:\n", r)
+
+    if find_spec("pandas"):
+        r = client.get_df(query, columns_names=["Col Integer"])
+        print("data in dataframe format:\n", r)
+
     client.drop_db(TEST_DB)
 
 
