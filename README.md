@@ -1,18 +1,18 @@
-## Python обертка для запросов в БД [Clickhouse](https://clickhouse.yandex/)
+## Python wrapper for database queries [Clickhouse](https://clickhouse.yandex/)
 
-Обертка сделана вокруг [clickhouse-driver](https://clickhouse-driver.readthedocs.io)
+The wrapper is done around [clickhouse-driver](https://clickhouse-driver.readthedocs.io)
 
-Написано на версии python 3.5
+Written in python version 3.5
 
-## Установка
+## Installation
 ```
 pip install clickhousepy
-или
-pip install clickhousepy[pandas]  (для установки pandas)
+or
+pip install clickhousepy[pandas]  (for installation pandas)
 ```
 
 
-## Получение данных из Clickhouse в формате Pandas Dataframe
+## Getting Data from Clickhouse in Pandas Dataframe Format
 ```python
 from clickhousepy import Client
 import datetime as dt
@@ -24,7 +24,7 @@ TEST_TABLE = "__chpytest12345"
 client.create_db(TEST_DB)
 client.create_table_mergetree(
     TEST_DB, TEST_TABLE,
-    columns=[("i", "UInt32")], # или так ["i UInt32"]
+    columns=[("i", "UInt32")], # or ["i UInt32"]
     orders=["i"],
 )
 client.insert(
@@ -33,10 +33,10 @@ client.insert(
 ) 
 query = "SELECT i FROM {}.{}".format(TEST_DB, TEST_TABLE)
 r = client.get_df(query, columns_names=["Col Integer"])
-print("данные в формате dataframe:\n", r)
+print(r)
 ```
 
-## Краткая документация по некоторым методам
+## Brief documentation of some methods
 ```python
 from clickhousepy import Client
 import datetime as dt
@@ -48,18 +48,17 @@ TEST_TABLE = "__chpytest12345"
 client = Client(host="", user="", password="")
 
 r = client.show_databases()
-print("список баз данных:", r)
+print("list of databases:", r)
 
-# Создание базы данных.
 client.create_db(TEST_DB)
-# Создание таблицы.
+
 client.create_table_mergetree(
     TEST_DB, TEST_TABLE,
     columns=[("s", "String")],
     orders=["s"],
 )
-# Вставка данных.
-# Подробнее об этом тут
+# Inserting data.
+# Read more about it here
 # https://clickhouse-driver.readthedocs.io/en/latest/quickstart.html#inserting-data
 client.insert(
     TEST_DB, TEST_TABLE,
@@ -67,27 +66,26 @@ client.insert(
 ) 
 
 r = client.exists(TEST_DB, TEST_TABLE)
-print("таблица существует? ", r)
+print("does the table exist?", r)
 
 r = client.get_count_rows(TEST_DB, TEST_TABLE)
-print("кол-во строк:", r)
+print("number of lines:", r)
 
-# Любой запрос.
+# Any request.
 r = client.execute("SELECT * FROM {}.{}".format(TEST_DB, TEST_TABLE))
-print("данные запроса:", r)
+print(r)
 ```
 
-### Сущность DB 
+### Class DB
 ```python
 db = client.DB(TEST_DB)
 r = db.show_tables()
-print("список таблиц базы данных {}:".format(TEST_DB), r)
+print("list of database tables {}:".format(TEST_DB), r)
 
-# Удаление базы данных.
 db.drop_db()
 ```
 
-### Сущность Table 
+### Class Table 
 ```python
 db = client.create_db(TEST_DB)
 
@@ -97,16 +95,15 @@ table = db.create_table_mergetree(
     orders=["d"],
     partition=["s", "d"],
 )
-# Актуализировать уже созданную таблицу
+# Initialization of an existing table.
 # table = client.Table(TEST_DB, TEST_TABLE)
 
 r = table.show_create_table()
-print("описание создания таблицы", r)
+print("table creation description", r)
 
 r = table.describe()
-print("столбцы таблицы", r)
+print("table columns", r)
 
-print("вставка данных")
 table.insert(
     [
         {"s": "1", "t": "1", "d": dt.datetime(2000, 1, 1)},
@@ -118,56 +115,56 @@ table.insert(
 )
 
 data = table.select()
-print("Первые 10 строк таблицы", data)
+print("First 10 rows of the table", data)
 
 data = table.select(limit=1, columns=["s"], where="s = 2")
-print("Выборка с фильтрацией", data)
+print("Filtered sampling", data)
 
 r = table.get_count_rows()
-print("кол-во строк:", r)
+print("number of lines:", r)
 
 r = table.get_min_date(date_column_name="d")
-print("минимальная дата:", r)
+print("minimum date:", r)
 
 r = table.get_max_date(date_column_name="d")
-print("максимальная дата:", r)
+print("maximum date:", r)
 
-print("удаление партиций")
+print("deleting partitions")
 table.drop_partitions([["3", "2000-01-03"], ["4", "2000-01-04"]])
 
 r = table.get_count_rows()
-print("кол-во строк после удаления партиций:", r)
+print("number of lines after deleting partitions:", r)
 
-print("мутация обновления строки")
+print("row update mutation")
 table.update(update="t = '20' ", where="t = '2' ")
 
-print("мутация удаления строки")
+print("row deletion mutation")
 table.delete(where="t = '20'")
 time.sleep(1)
 r = table.get_count_rows()
-print("кол-во строк после мутации удаления строки:", r)
+print("number of lines after mutation of line deletion:", r)
 
-print("очистка таблицы")
+print("clear table")
 table.truncate()
 r = table.get_count_rows()
-print("кол-во строк после очистки таблицы:", r)
+print("number of rows after clearing the table:", r)
 
 new_table_name = TEST_TABLE + "_new"
-print("переименование таблицы {} в {}".format(TEST_TABLE, new_table_name))
+print("rename table {} в {}".format(TEST_TABLE, new_table_name))
 table.rename(TEST_DB, new_table_name)
 
 r = client.exists(TEST_DB, TEST_TABLE)
-print("существует таблица {}?".format(TEST_TABLE), r)
+print("does table {} exist?".format(TEST_TABLE), r)
 
-print("удаление таблиц")
+print("drop tables")
 table.drop_table()
 
-print("удаление базы данных")
+print("deleting a database")
 db.drop_db()
 ```
 
 
-### Метод копирования данных из одной таблицы в другую с проверкой кол-ва строк после копирования
+### Method of copying data from one table to another with checking the number of rows after copying
 ```python
 client.drop_db(TEST_DB)
 db = client.create_db(TEST_DB)
@@ -193,11 +190,11 @@ is_identic = table2.copy_data_from(
     where="string != 'c' ",
     columns=["string"]
 )
-# Функция вернет bool значение, кол-во строк сопадает или нет, после копирования.
+# The function will return a bool value, whether the number of lines matches or not, after copying.
 assert is_identic
 ```
 
-### Метод копирования данных из одной таблицы в другую с удалением дублирующихся строк.
+### A method of copying data from one table to another while removing duplicate rows.
 ```python
 client.drop_db(TEST_DB)
 db = client.create_db(TEST_DB)
@@ -218,8 +215,8 @@ table.insert(
 
 table_name_2 = TEST_TABLE + "_copy"
 table2 = table.copy_table(TEST_DB, table_name_2, return_new_table=True)
-# При удалении дублирующихся строк (distinct=True), 
-# проверки на кол-во строк после копирования не будет.
+# When removing duplicate rows (distinct = True), 
+# there will be no check for the number of rows after copying.
 table2.copy_data_from(
     TEST_DB, TEST_TABLE,
     columns=["string"],
@@ -228,16 +225,15 @@ table2.copy_data_from(
 assert 3 == table2.get_count_rows()
 ```
 
-## Зависимости
+## Dependencies
 - [clickhouse-driver](https://github.com/mymarilyn/clickhouse-driver/)
-- [pandas](https://github.com/pandas-dev/pandas) (Опционально)
+- [pandas](https://github.com/pandas-dev/pandas) (Optional)
 
-## Автор
-Павел Максимов
+## Author
+Pavel Maksimov
 
-Связаться со мной можно в 
-[Телеграм](https://teleg.run/pavel_maksimow) 
-и в 
+You can contact me at
+[Telegram](https://teleg.run/pavel_maksimow),
 [Facebook](https://www.facebook.com/pavel.maksimow)
 
 Удачи тебе, друг! Поставь звездочку ;)
