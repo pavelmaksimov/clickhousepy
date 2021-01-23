@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import logging
 import time
+import datetime as dt
 
 from clickhouse_driver import Client as ChClient
 
@@ -104,7 +105,7 @@ class Client(ChClient):
             raise AttributeError("Отсутствуют значения в переменной columns")
         if isinstance(columns[0], (list, tuple)):
             columns = [" ".join(i) for i in columns]
-
+        # TODO: проверка, что тип стоолбца присутсвует.
         columns = ",\n\t".join(columns)
         orders = ", ".join(orders)
         settings = "SETTINGS {}\n".format(settings) if settings is not None else ""
@@ -316,15 +317,16 @@ class Client(ChClient):
         :param db: str
         :param table: str
         :param partitions: str or int or list(list)
-             Если ключ партиции состоит из одного столбца,
-             то можно передать, как str или int, а иначе, как list(list).
-             Примеры:  '2018-01-01' или 123 или [...,[12345, '2018-01-01']]
-        :param kwargs: параметры принимаемые библиотекой clickhouse_driver
+            If the partition key consists of one column,
+            then it can be passed as str or int, and otherwise as list (list).
+            Examples:  '2018-01-01' or 123 or [...,[12345, '2018-01-01']]
+        :param kwargs: parameters accepted by the clickhouse_driver library
         :return: None
         """
+        if not isinstance(partitions, (list, tuple)):
+            partitions = [[str(partitions)]]
 
-        def _drop_partition(partition_key):
-            # Преобразование списка в строку.
+        for partition_key in partitions:
             partition_key_serialize = []
             for value in partition_key:
                 if isinstance(value, int):
@@ -344,11 +346,6 @@ class Client(ChClient):
 
             query = "ALTER TABLE {}.{} DROP PARTITION ({})".format(db, table, partition)
             self.execute(query, **kwargs)
-
-        if not isinstance(partitions, (list, set, tuple)):
-            partitions = [[str(partitions)]]
-
-        list(map(_drop_partition, partitions))
 
     def is_mutation_done(self, mutation_id, **kwargs):
         query = "SELECT is_done FROM system.mutations WHERE mutation_id='{}' "
@@ -568,15 +565,14 @@ class Client(ChClient):
         self, from_db, from_table, to_db, to_table, **kwargs
     ):
         """
-        Перенос из одной таблицы в другую идентичную таблицу
-        с принудительным приведением типов столбцов
-        по типам столбцов целевой таблицы.
+        Transfer from one table to another identical table with forced casting
+        of column types according to the types of columns of the target table.
 
         :param from_db: str
         :param from_table: str
         :param to_db: str
         :param to_table: str
-        :param kwargs: параметры принимаемые библиотекой clickhouse_driver
+        :param kwargs: parameters accepted by the clickhouse_driver library
         :return: None
         """
         column_data = self.describe(to_db, to_table)
@@ -616,9 +612,12 @@ class Client(ChClient):
         **kwargs
     ):
         rows = len(data)
+        is_identic = False
         if stage_table is None:
             stage_table = "{}_".format(table)
+
         self.drop_table(stage_db, stage_table, **kwargs)
+
         try:
             self.copy_table(db, table, stage_db, stage_table, **kwargs)
             self.insert(stage_db, stage_table, data, columns, **kwargs)
@@ -628,9 +627,11 @@ class Client(ChClient):
                 stage_db, stage_table, db, table, columns=columns, **kwargs
             )
             if not is_identic:
-                raise AssertionError("The number of lines is not identical")
+                logging.error("The number of lines is not identical")
+
         finally:
             self.drop_table(stage_db, stage_table, **kwargs)
+            return is_identic
 
     def get_df(self, query, columns_names=None, dtype=None, **kwargs):
         """
@@ -984,6 +985,12 @@ class DB(ChClient):
             **kwargs
         )
 
+    def __repr__(self):
+        return str(self.db)
+
+    def __str__(self):
+        return str(self.db)
+
 
 class Table(ChClient):
     def __init__(self, client, db, table, *args, **kwargs):
@@ -1288,3 +1295,9 @@ class Table(ChClient):
             on_cluster=on_cluster,
             **kwargs
         )
+
+    def __repr__(self):
+        return "{}.{}".format(self.db, self.table)
+
+    def __str__(self):
+        return "{}.{}".format(self.db, self.table)
