@@ -239,31 +239,33 @@ class Client(ChClient):
         else:
             raise TypeError("параметр columns принимается только, как list и tuple")
 
+        number_rows = self.get_count_rows(from_db, from_table, where=where)
+        before = self.get_count_rows(to_db, to_table)
         self.execute(
             "INSERT INTO {}.{} {} SELECT {} FROM {}.{} {}".format(
                 to_db, to_table, columns, from_columns, from_db, from_table, where_
             ),
             **kwargs
         )
-        count_rows1 = self.get_count_rows(from_db, from_table, where=where)
-        count_rows2 = self.get_count_rows(to_db, to_table, where=where)
+        after = self.get_count_rows(to_db, to_table)
+
         if not distinct:
-            is_identic = count_rows1 == count_rows2
+            is_identic = after - before == number_rows
             if not is_identic:
                 logging.warning(
                     "Кол-во строк, после копирования данных НЕ СОВПАДАЮТ. "
                     "Строк в таблице источнике: {}, скопировано строк {}.".format(
-                        count_rows1, count_rows2
+                        number_rows, after - before
                     )
                 )
             else:
-                logging.info("Скопировано строк: {}".format(count_rows1))
+                logging.info("Скопировано строк: {}".format(number_rows))
             return is_identic
         else:
             logging.info(
                 "Кол-во строк в таблице источнике: {}. "
                 "Кол-во скопированных строк без дубликатов: {}.".format(
-                    count_rows1, count_rows2
+                    number_rows, after - before
                 )
             )
             return None
