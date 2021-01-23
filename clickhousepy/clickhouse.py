@@ -99,9 +99,12 @@ class Client(ChClient):
 
         if not columns:
             raise AttributeError("Missing value in columns")
+
         if isinstance(columns[0], (list, tuple)):
             columns = [" ".join(i) for i in columns]
+
         # TODO: check that the type of the column is present.
+
         columns = ",\n\t".join(columns)
         orders = ", ".join(orders)
         settings = "SETTINGS {}\n".format(settings) if settings is not None else ""
@@ -134,6 +137,7 @@ class Client(ChClient):
             engine=engine,
         )
         self.execute(query, **kwargs)
+
         return self.Table(db, table)
 
     def create_table_log(
@@ -161,6 +165,7 @@ class Client(ChClient):
         """
         if not columns:
             raise AttributeError("Missing values in columns")
+
         if isinstance(columns[0], (list, tuple)):
             columns = [" ".join(i) for i in columns]
 
@@ -182,6 +187,7 @@ class Client(ChClient):
             engine=type_log_table or engine,
         )
         self.execute(query, **kwargs)
+
         return self.Table(db, table)
 
     def copy_table(self, db, table, new_db, new_table, if_not_exists=True, **kwargs):
@@ -189,6 +195,7 @@ class Client(ChClient):
         query = "CREATE TABLE {} {}.{} as {}.{}"
         query = query.format(exists, new_db, new_table, db, table)
         self.execute(query, **kwargs)
+
         return self.Table(new_db, new_table)
 
     def copy_data(
@@ -219,7 +226,9 @@ class Client(ChClient):
         """
         if not self.exists(to_db, to_table, **kwargs):
             self.copy_table(from_db, from_table, to_db, to_table, **kwargs)
+
         where_ = "WHERE {}".format(where) if where else ""
+
         if columns and isinstance(columns, (list, tuple)):
             columns_ = ",\n\t".join(columns)
             if distinct:
@@ -227,17 +236,20 @@ class Client(ChClient):
             else:
                 from_columns = columns_
             columns = "(\n\t{}\n)\n".format(columns_)
+
         elif columns is None:
             columns = ""
             if distinct:
                 from_columns = "DISTINCT *"
             else:
                 from_columns = "*"
+
         else:
             raise TypeError("Columns parameter is accepted only as list and tuple")
 
         number_rows = self.get_count_rows(from_db, from_table, where=where)
         before = self.get_count_rows(to_db, to_table)
+
         self.execute(
             "INSERT INTO {}.{} {} SELECT {} FROM {}.{} {}".format(
                 to_db, to_table, columns, from_columns, from_db, from_table, where_
@@ -257,6 +269,7 @@ class Client(ChClient):
                 )
             else:
                 logging.info("Copied lines: {}".format(number_rows))
+
             return is_identic
         else:
             logging.info(
@@ -265,6 +278,7 @@ class Client(ChClient):
                     number_rows, after - before
                 )
             )
+
             return None
 
     def deduplicate_data(self, db, table, where, **kwargs):
@@ -279,10 +293,12 @@ class Client(ChClient):
         """
         copy_table_name = table + "copy_table_for_deduplicate"
         self.copy_table(db, table, db, copy_table_name, **kwargs)
+
         count_rows_before = self.get_count_rows(db, table, where, **kwargs)
         is_identic_data = self.copy_data(
             db, table, db, copy_table_name, where=where, **kwargs
         )
+
         if is_identic_data:
             self.delete(
                 db, table, where=where, prevent_parallel_processes=True, **kwargs
@@ -292,12 +308,14 @@ class Client(ChClient):
             count_rows_after = self.get_count_rows(db, table, where, **kwargs)
             diff = count_rows_before - count_rows_after
             logging.info("Removed duplicate lines: {}".format(diff))
+
             return True
         else:
             logging.error(
                 "The data when copying the table is not identical, start again."
             )
             self.drop_table(db, copy_table_name, **kwargs)
+
             return False
 
     def drop_db(self, db, if_exists=True, **kwargs):
@@ -359,6 +377,7 @@ class Client(ChClient):
             "ORDER BY create_time DESC"
         ).format(db, table, command)
         r = self.execute(query, **kwargs)
+
         return r[0][0] if r else None
 
     def get_mutations(
@@ -573,14 +592,17 @@ class Client(ChClient):
         """
         column_data = self.describe(to_db, to_table)
         columns_list = []
+
         for i in column_data:
             if i[2] not in ("ALIAS", "MATERIALIZED"):
                 column_name, column_type = i[0], i[1]
                 c = self._transform_data_type_sql(column_name, column_type)
                 columns_list.append(c)
+
         columns_str = ",\n".join(columns_list)
         sql = "INSERT INTO {}.{} SELECT {} FROM {}.{}"
         sql = sql.format(to_db, to_table, columns_str, from_db, from_table)
+
         return self.execute(sql, **kwargs)
 
     def insert(self, db, table, data, columns=None, **kwargs):
@@ -624,9 +646,9 @@ class Client(ChClient):
             )
             if not is_identic:
                 logging.error("The number of lines is not identical")
-
         finally:
             self.drop_table(stage_db, stage_table, **kwargs)
+
             return is_identic
 
     def get_df(self, query, columns_names=None, dtype=None, **kwargs):
@@ -649,6 +671,7 @@ class Client(ChClient):
         """Formation of a select request."""
         where = "WHERE {}\n".format(where) if where else ""
         order_by = "ORDER BY {}\n".format(order_by) if order_by else ""
+
         if columns and isinstance(columns, (tuple, list)):
             columns_ = ",\n\t".join(columns)
             columns_ = "\n\t{}\n".format(columns_)
@@ -660,6 +683,7 @@ class Client(ChClient):
         query = "SELECT {}\nFROM {}.{}\n{}{}LIMIT {} OFFSET {}".format(
             columns_, db, table, where, order_by, limit, offset
         )
+
         return query
 
     def select(
@@ -723,6 +747,7 @@ class Client(ChClient):
             # If no column names are supplied, it will take them from the table description.
             columns_data = self.describe(db, table, **kwargs)
             columns = [i[0] for i in columns_data]
+
         return self.get_df(query, columns_names=columns, dtype=dtype, **kwargs)
 
     def _alter_table_column(
@@ -765,10 +790,12 @@ class Client(ChClient):
         cluster = "ON CLUSTER {}".format(on_cluster) if on_cluster else ""
         extra = extra if extra else ""
         method = method.upper()
+
         if method == "ADD":
             exists = "IF NOT EXISTS" if if_not_exists_or_if_exists else ""
         else:
             exists = "IF EXISTS" if if_not_exists_or_if_exists else ""
+
         query = (
             "ALTER TABLE {db}.{table} {cluster} {method} COLUMN "
             "{exists} {name} {type} {default} {codec} {ttl} {after} {extra}"
@@ -787,6 +814,7 @@ class Client(ChClient):
             after=after,
             extra=extra,
         )
+
         return self.execute(query, **kwargs)
 
     def add_column(
