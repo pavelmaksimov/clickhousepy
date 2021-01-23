@@ -104,10 +104,10 @@ class Client(ChClient):
         for col in columns:
             try:
                 if isinstance(col, (list, tuple)):
-                    assert len(col) < 2
+                    assert len(col) >= 2
                     columns_str += " ".join(col)
                 else:
-                    assert col.split(" ") < 2
+                    assert len(col.split(" ")) >= 2
                     columns_str += col
             except AssertionError:
                 raise AssertionError("Not valid column schema for '{}'".format(col))
@@ -394,6 +394,7 @@ class Client(ChClient):
         columns=None,
         where=None,
         order_by="create_time DESC",
+        dataframe=False,
         **kwargs
     ):
         """
@@ -404,35 +405,12 @@ class Client(ChClient):
         :param columns: list, tuple, None
         :param where: str
         :param order_by: str
+        :param dataframe: bool : return DataFrame
         :param kwargs: Parameters accepted by the clickhouse_driver library
         :return: list
         """
         return self.select(
-            "system", "mutations", limit, offset, columns, where, order_by, **kwargs
-        )
-
-    def get_mutations_df(
-        self,
-        limit=10,
-        offset=0,
-        columns=None,
-        where=None,
-        order_by="create_time DESC",
-        **kwargs
-    ):
-        """
-        Outputs mutation table rows in DataFrame format.
-
-        :param limit: int
-        :param offset: int
-        :param columns: list, tuple, None
-        :param where: str
-        :param order_by: str
-        :param kwargs: Parameters accepted by the clickhouse_driver library
-        :return: DataFrame
-        """
-        return self.select_df(
-            "system", "mutations", limit, offset, columns, where, order_by, **kwargs
+            "system", "mutations", limit, offset, columns, where, order_by, dataframe, **kwargs
         )
 
     def delete(
@@ -702,6 +680,7 @@ class Client(ChClient):
         columns=None,
         where=None,
         order_by=None,
+        dataframe=False,
         **kwargs
     ):
         """
@@ -713,49 +692,22 @@ class Client(ChClient):
         :param columns: list, tuple, None
         :param where: str
         :param order_by: str
-        :param kwargs: Parameters accepted by the clickhouse_driver library
-        :return: list
-        """
-        query = self._generate_select(
-            db, table, limit, offset, columns, where, order_by
-        )
-        return self.execute(query, **kwargs)
-
-    def select_df(
-        self,
-        db,
-        table,
-        limit=10,
-        offset=0,
-        columns=None,
-        where=None,
-        order_by=None,
-        dtype=None,
-        **kwargs
-    ):
-        """
-
-        :param db: str
-        :param table: str
-        :param limit: int
-        :param offset: int
-        :param columns: list, tuple, None
-        :param where: str
-        :param order_by: str
-        :param dtype: object type : a parameter is passed when creating a dataframe 
-            to determine the type of columns of the dataframe
+        :param dataframe: bool : return DataFrame
         :param kwargs: Parameters accepted by the clickhouse_driver library
         :return: DataFrame
         """
         query = self._generate_select(
             db, table, limit, offset, columns, where, order_by
         )
-        if columns is None:
-            # If no column names are supplied, it will take them from the table description.
-            columns_data = self.describe(db, table, **kwargs)
-            columns = [i[0] for i in columns_data]
+        if dataframe:
+            if columns is None:
+                # If no column names are supplied, it will take them from the table description.
+                columns_data = self.describe(db, table, **kwargs)
+                columns = [i[0] for i in columns_data]
 
-        return self.get_df(query, columns_names=columns, dtype=dtype, **kwargs)
+            return self.get_df(query, columns_names=columns, **kwargs)
+        else:
+            return self.execute(query, **kwargs)
 
     def _alter_table_column(
         self,
@@ -1028,22 +980,8 @@ class Table(ChClient):
         self.table = table
         super().__init__(*args, **kwargs)
 
-    def select(self, limit=10, offset=0, columns=None, where=None, **kwargs):
-        """
-
-        :param limit: int
-        :param offset: int
-        :param columns: list, tuple, None
-        :param where: str
-        :param kwargs: Parameters accepted by the clickhouse_driver library
-        :return: list
-        """
-        return self._client.select(
-            self.db, self.table, limit, offset, columns, where, **kwargs
-        )
-
-    def select_df(
-        self, limit=10, offset=0, columns=None, where=None, dtype=None, **kwargs
+    def select(
+        self, limit=10, offset=0, columns=None, where=None, order_by=None, dataframe=False, **kwargs
     ):
         """
 
@@ -1051,13 +989,15 @@ class Table(ChClient):
         :param offset: int
         :param columns: list, tuple, None
         :param where: str
-        :param dtype: object type : a parameter is passed when creating a dataframe 
+        :param order_by: str
+        :param dataframe: bool : return DataFrame
+        :param dtype: object type : a parameter is passed when creating a dataframe
             to determine the type of columns of the dataframe
         :param kwargs: Parameters accepted by the clickhouse_driver library
         :return: DataFrame
         """
-        return self._client.select_df(
-            self.db, self.table, limit, offset, columns, where, dtype, **kwargs
+        return self._client.select(
+            self.db, self.table, limit, offset, columns, where, order_by, dataframe, **kwargs
         )
 
     def insert(self, data, columns=None, **kwargs):
