@@ -325,16 +325,27 @@ class Client(ChClient):
 
         def _drop_partition(partition_key):
             # Преобразование списка в строку.
-            partition_key = [
-                i if isinstance(i, int) else "'{}'".format(i) for i in partition_key
-            ]
-            partition_key = ", ".join(map(str, partition_key))
-            query = "ALTER TABLE {}.{} DROP PARTITION ({})".format(
-                db, table, partition_key
-            )
+            partition_key_serialize = []
+            for value in partition_key:
+                if isinstance(value, int):
+                    partition_key_serialize.append(value)
+                elif isinstance(value, dt.date):
+                    partition_key_serialize.append(
+                        "'{}'".format(value.isoformat())
+                    )
+                elif isinstance(value, dt.datetime):
+                    partition_key_serialize.append(
+                        "'{}'".format(value.strftime("%Y-%m-%d %H:%M:%S"))
+                    )
+                else:
+                    partition_key_serialize.append("'{}'".format(value))
+
+            partition = ", ".join(map(str, partition_key_serialize))
+
+            query = "ALTER TABLE {}.{} DROP PARTITION ({})".format(db, table, partition)
             self.execute(query, **kwargs)
 
-        if not isinstance(partitions, list):
+        if not isinstance(partitions, (list, set, tuple)):
             partitions = [[str(partitions)]]
 
         list(map(_drop_partition, partitions))
