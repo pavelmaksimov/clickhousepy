@@ -100,10 +100,17 @@ class Client(ChClient):
         if not columns:
             raise AttributeError("Missing value in columns")
 
-        if isinstance(columns[0], (list, tuple)):
-            columns = [" ".join(i) for i in columns]
-
-        # TODO: check that the type of the column is present.
+        columns_str = ""
+        for col in columns:
+            try:
+                if isinstance(col, (list, tuple)):
+                    assert len(col) < 2
+                    columns_str += " ".join(col)
+                else:
+                    assert col.split(" ") < 2
+                    columns_str += col
+            except AssertionError:
+                raise AssertionError("Not valid column schema for '{}'".format(col))
 
         columns = ",\n\t".join(columns)
         orders = ", ".join(orders)
